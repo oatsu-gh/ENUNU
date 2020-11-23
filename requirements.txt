@@ -1,0 +1,3 @@
+numpy != 1.19.4
+tqdm
+utaupy >= 1.9
