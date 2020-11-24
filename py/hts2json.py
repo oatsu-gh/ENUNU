@@ -43,17 +43,22 @@ def load_lines(lines: list) -> dict:
         delimiters = re.escape('=+-~∼!@#$%^ˆ&;_|[]')
         l_contexts_2d = [re.split((f'[{delimiters}]'), s) for s in l_contexts]
         # 各種コンテキストを辞書に登録する
-        d_line['p'] = l_contexts_2d[0]
-        d_line['a'] = l_contexts_2d[1]
-        d_line['b'] = l_contexts_2d[2]
-        d_line['c'] = l_contexts_2d[3]
-        d_line['d'] = l_contexts_2d[4]
-        d_line['e'] = l_contexts_2d[5]
-        d_line['f'] = l_contexts_2d[6]
-        d_line['g'] = l_contexts_2d[7]
-        d_line['h'] = l_contexts_2d[8]
-        d_line['i'] = l_contexts_2d[9]
-        d_line['j'] = l_contexts_2d[10]
+        d_line.update(dict(
+            zip(('p', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'), l_contexts_2d)))
+        # ここからzipのもとのコード----------------------
+        # d_line['p'] = l_contexts_2d[0]
+        # d_line['a'] = l_contexts_2d[1]
+        # d_line['b'] = l_contexts_2d[2]
+        # d_line['c'] = l_contexts_2d[3]
+        # d_line['d'] = l_contexts_2d[4]
+        # d_line['e'] = l_contexts_2d[5]
+        # d_line['f'] = l_contexts_2d[6]
+        # d_line['g'] = l_contexts_2d[7]
+        # d_line['h'] = l_contexts_2d[8]
+        # d_line['i'] = l_contexts_2d[9]
+        # d_line['j'] = l_contexts_2d[10]
+        # ここまでzipのもとのコード----------------------
+
         # ラベル情報のリストに追加
         labels.append(d_line)
     return {'labels': labels}
@@ -80,6 +85,15 @@ def hts2json(path_lab, path_json):
     export_flatjson(load(path_lab), path_json)
 
 
+def main():
+    """
+    直接起動したときの動作。
+    1つのラベルファイルをJSONに変換する。
+    """
+    path_lab = input('path_lab: ')
+    path_json = path_lab.replace('.lab', '.json')
+    hts2json(path_lab, path_json)
+
+
 if __name__ == '__main__':
-    from sys import argv
-    hts2json(argv[1], argv[2])
+    main()
