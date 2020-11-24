@@ -2,6 +2,7 @@
 
 ##########
 # customized for nnsvs on WSL(Ubuntu)
+# customized to generate ENUENU-friendly sinsy's label files on Stage 0.
 ##########
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -15,12 +16,13 @@ function xrun () {
     set +x
 }
 
+script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 #change-----------------------------------------------------------
 NNSVS_ROOT=~/nnsvs
+export ENUNU_ROOT=$script_dir/../../..
 #change-----------------------------------------------------------
-script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 NNSVS_COMMON_ROOT=$NNSVS_ROOT/egs/_common/spsvs
-NO2_ROOT=$NNSVS_ROOT/egs/_common/no2
+export NO2_ROOT=$NNSVS_ROOT/egs/_common/no2
 . $NNSVS_ROOT/utils/yaml_parser.sh || exit 1;
 
 eval $(parse_yaml "./config.yaml" "")
@@ -52,7 +54,7 @@ expdir=exp/$expname
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     if [ ! -e $db_root ]; then
 	cat<<EOF
-kuroppid_singing_database files were not found
+OFTON_P_UTAGOE_DB was not found
 EOF
     fi
 fi
@@ -60,19 +62,17 @@ fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
-    sh $NO2_ROOT/utils/data_prep.sh ./config.yaml
+    #changed↓-----------------------------------------------------------
+    sh $script_dir/utils/data_prep.sh ./config.yaml
+    #changed↑-----------------------------------------------------------
     mkdir -p data/list
 
     echo "train/dev/eval split"
     find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
         | sort > data/list/utt_list.txt
-    #change↓-----------------------------------------------------------
-    grep tetsudou_shouka_ data/list/utt_list.txt > data/list/$eval_set.list
-    #change↑-----------------------------------------------------------
+    grep haruga_kita_ data/list/utt_list.txt > data/list/$eval_set.list
     grep kagome_kagome_ data/list/utt_list.txt > data/list/$dev_set.list
-    #change↓-----------------------------------------------------------
-    grep -v tetsudou_shouka_ data/list/utt_list.txt | grep -v kagome_kagome_ > data/list/$train_set.list
-    #change↑-----------------------------------------------------------
+    grep -v haruga_kita_ data/list/utt_list.txt | grep -v kagome_kagome_ > data/list/$train_set.list
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
