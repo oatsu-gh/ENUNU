@@ -1,5 +1,7 @@
 __pycache__
 *.exe
 *.wav
+data
+dump
+outputs
 release
-test

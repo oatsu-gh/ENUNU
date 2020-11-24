@@ -2,14 +2,17 @@
 nnsvs_root: "~/nnsvs"
 
 ## The name of singer
-spk: "kurobousuku"
+spk: "ofuton_p"
 
-## exp tag(for managing experiments)
-tag: "jp_qst001_nnsvs"
 
 ## Directory of Unzipped singing voice database
 # PLEASE CHANGE THE PATH BASED ON YOUR ENVIRONMENT
-db_root: "/mnt/d/NNSVS/db/Kuroppoid/kurobousuku_ai_beta_ecoedco"
+db_root: "/mnt/d/NNSVS/db/OfutonP/OFUTON_P_UTAGOE_DB_v1.6_label_fixed_ecodeco"
+
+## exp tag(for managing experiments)
+tag: "jp_qst_crazy_mono_005-2_enunu_182D"
+## HTS-style question used for extracting musical/linguistic context from musicxml files
+question_path: "./hed/jp_qst_crazy_mono_005-2_enunu_182D.hed"
 
 ## Output directory
 # All the generated labels, intermediate files, and segmented wav files
@@ -25,9 +28,6 @@ exclude_songs: []
 # To enable the unvoiced vowels, modified version of sinsy dictionary files
 # are needed.
 sinsy_dic: "./dic"
-
-## HTS-style question used for extracting musical/linguistic context from musicxml files
-question_path: "./hed/jp_qst001_nnsvs.hed"
 
 ### Data preparation related settings.
 ## Song segmentation by silence durations.
