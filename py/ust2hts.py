@@ -28,6 +28,7 @@ d2, e2, f2 には USTのNoteNumのmod12を代入し、
 d3, e3, f3 には 'xx' を代入する。休符の学習データ引っ張ってきそうな気はする。
 """
 
+from functools import lru_cache
 from os.path import basename, splitext
 
 import utaupy as up
@@ -36,10 +37,10 @@ from hts2json import hts2json
 # from pprint import pprint
 
 
-
+@lru_cache()
 def language_independent_phoneme_identity(phoneme):
     """
-    音素の分類 (c, v, p, s)
+    音素の分類 (c, v, p, s, b)
     """
     vowels = ('a', 'i', 'u', 'e', 'o', 'N', 'A', 'I', 'U', 'E', 'O')
     breaks = ('br', 'cl')
@@ -180,7 +181,7 @@ def main():
     # 音素数などの整合性をチェック
     full_label.song.check()
     # ファイル出力
-    full_label.write(path_hts, strict_hts_style=True)
+    full_label.write(path_hts, strict_sinsy_style=True)
     hts2json(path_hts, path_json)
 
 
