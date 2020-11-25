@@ -1,5 +1,9 @@
+hydra
+joblib
+nnnkwii
 nnsvs
 numpy != 1.19.4
+omegaconf
 scipy
 torch
 tqdm
