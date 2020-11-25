@@ -1,6 +1,6 @@
 nnsvs
 numpy != 1.19.4
-pytorch
+torch
 scipy
 tqdm
 utaupy >= 1.9
