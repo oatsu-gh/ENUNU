@@ -1,3 +1,7 @@
+nnsvs
 numpy != 1.19.4
+pytorch
+scipy
 tqdm
 utaupy >= 1.9
+pyyaml
