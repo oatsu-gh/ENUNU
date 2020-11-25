@@ -1,6 +1,6 @@
 # ENUNU
 
-NNSVS用歌声モデルをUTAU音源として使えるようにするプラグイン
+NNSVS用歌声モデルをUTAU音源として使えるようにするUTAUプラグイン
 
 UTAU plugin powered by NNSVS
 
