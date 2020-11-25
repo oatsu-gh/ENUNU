@@ -1,7 +1,7 @@
 nnsvs
 numpy != 1.19.4
-torch
 scipy
+torch
 tqdm
 utaupy >= 1.9
 pyyaml
