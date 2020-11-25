@@ -1,7 +1,8 @@
-__pycache__
 *.exe
 *.wav
+*.pth
 data
 dump
 outputs
 release
+__pycache__
