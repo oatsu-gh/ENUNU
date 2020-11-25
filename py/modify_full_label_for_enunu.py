@@ -40,7 +40,7 @@ def modify_full_label_for_enuenu(path_lab_in, path_lab_out):
     full_label = hts.load(path_lab_in)
     edit_e2e3(full_label)
     full_label.song.check()
-    full_label.write(path_lab_out, strict_hts_style=False)
+    full_label.write(path_lab_out, strict_sinsy_style=False)
 
 
 def main_manual():
