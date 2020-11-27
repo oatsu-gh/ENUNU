@@ -2,8 +2,7 @@
 
 ### Target files
 
-- synthesis/\*\*/\*
-    - The directory is copy of [nnsvs/nnsvs/bin/synthesis](https://github.com/r9y9/nnsvs/tree/master/nnsvs/bin/conf/synthesis) .
+- config_sample.yaml
 
 ### Copyright
 

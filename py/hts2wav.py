@@ -42,7 +42,7 @@ NNSVSを利用して、ラベルから音声ファイルを生成する。
 nnsvs-synthesis コマンドの源である nnsvs.bin.synthesis.py をENUNU用に改変した。
 """
 
-from os.path import join
+from os.path import basename, dirname, join, splitext
 from sys import argv
 
 import hydra
@@ -54,7 +54,7 @@ from nnmnkwii.io import hts
 from nnsvs.gen import (gen_waveform, postprocess_duration, predict_acoustic,
                        predict_duration, predict_timelag)
 from nnsvs.logger import getLogger
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from scipy.io import wavfile
 
 
@@ -62,39 +62,61 @@ def maybe_set_checkpoints_(config):
     """
     configファイルを参考に、使用するチェックポイントを設定する。
     """
-    if config.model_dir is None:
-        return
     model_dir = to_absolute_path(config.model_dir)
 
-    for typ in ["timelag", "duration", "acoustic"]:
-        model_config = join(model_dir, typ, "model.yaml")
-        model_checkpoint = join(model_dir, typ, config.model_checkpoint)
-
-        config[typ].model_yaml = model_config
-        config[typ].checkpoint = model_checkpoint
+    for typ in ("timelag", "duration", "acoustic"):
+        # config of each model
+        config[typ].model_yaml = join(model_dir, typ, "model.yaml")
+        # checkpoint of each model
+        config[typ].checkpoint = join(model_dir, typ, config[typ].checkpoint)
 
 
 def maybe_set_normalization_stats_(config):
     """
-    configファイルを参考に、使用するチェックポイントを設定する。
+    configファイルを参考に、使用する *_scaler.joblib ファイルを設定する。
     """
-    if config.stats_dir is None:
-        return
     stats_dir = to_absolute_path(config.stats_dir)
 
-    for typ in ["timelag", "duration", "acoustic"]:
-        in_scaler_path = join(stats_dir, f"in_{typ}_scaler.joblib")
-        out_scaler_path = join(stats_dir, f"out_{typ}_scaler.joblib")
-
-        config[typ].in_scaler_path = in_scaler_path
-        config[typ].out_scaler_path = out_scaler_path
+    for typ in ("timelag", "duration", "acoustic"):
+        # I/O path of scalar file for each model
+        config[typ].in_scaler_path = join(stats_dir, f"in_{typ}_scaler.joblib")
+        config[typ].out_scaler_path = join(stats_dir, f"out_{typ}_scaler.joblib")
 
 
-def synthesis(
-        config, device, label_path, question_path,
-        timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
-        duration_model, duration_config, duration_in_scaler, duration_out_scaler,
-        acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler):
+def probably_load_models_(config, device):
+    """
+    my_app 内にあった load() を繰り返す部分を関数として取り出した。
+    """
+    for typ in ("timelag", "duration", "acoustic"):
+        model = hydra.utils.instantiate(config[typ].netG).to(device)
+        checkpoint = torch.load(
+            to_absolute_path(config[typ].checkpoint),
+            map_location=lambda storage, loc: storage)
+        model.load_state_dict(checkpoint["state_dict"])
+        config[typ].in_scaler = joblib.load(to_absolute_path(config[typ].in_scaler_path))
+        config[typ].out_scaler = joblib.load(to_absolute_path(config[typ].out_scaler_path))
+        model.eval()
+
+
+def probably_set_wav_data_(config, wav, logger):
+    """
+    ビット深度を指定
+    """
+    if str(config.bit_depth) in ('16', '16i', 'int16'):
+        wav_data = wav.astype(np.int16)
+    elif str(config.bit_depth) in ('24', '24i', 'int24'):
+        wav_data = wav.astype(np.int24)
+    elif str(config.bit_depth) in ('32f', 'float32'):
+        wav_data = wav.astype(np.float32)
+    else:
+        logger.warn(
+            'sample_rate can take "16", "14" or "32f".'
+            ' This time render in 32bit float depth.')
+        wav_data = wav.astype(np.float32)
+    return wav_data
+
+
+def synthesis(config, device, label_path, question_path):
     """
     音声ファイルを合成する。
     """
@@ -116,14 +138,23 @@ def synthesis(
     else:
         # Time-lag
         lag = predict_timelag(
-            device, labels, timelag_model, timelag_config, timelag_in_scaler,
-            timelag_out_scaler, binary_dict, continuous_dict, pitch_indices,
-            log_f0_conditioning, config.timelag.allowed_range)
+            device, labels,
+            config.timelag.model,
+            config.timelag,
+            config.timelag.in_scaler,
+            config.timelag.out_scaler,
+            binary_dict, continuous_dict, pitch_indices,
+            log_f0_conditioning,
+            config.timelag.allowed_range)
 
         # Timelag predictions
         durations = predict_duration(
-            device, labels, duration_model, duration_config,
-            duration_in_scaler, duration_out_scaler, lag, binary_dict, continuous_dict,
+            device, labels,
+            config.duration.model,
+            config.duration,
+            config.duration.in_scaler,
+            config.duration.out_scaler,
+            lag, binary_dict, continuous_dict,
             pitch_indices, log_f0_conditioning)
 
         # Normalize phoneme durations
@@ -131,24 +162,34 @@ def synthesis(
 
     # Predict acoustic features
     acoustic_features = predict_acoustic(
-        device, duration_modified_labels, acoustic_model, acoustic_config,
-        acoustic_in_scaler, acoustic_out_scaler, binary_dict, continuous_dict,
-        config.acoustic.subphone_features, pitch_indices, log_f0_conditioning)
+        device, duration_modified_labels,
+        config.acoustic.model,
+        config.acoustic,
+        config.acoustic.in_scaler,
+        config.acoustic.out_scaler,
+        binary_dict, continuous_dict,
+        config.acoustic.subphone_features,
+        pitch_indices, log_f0_conditioning)
 
     # Waveform generation
     generated_waveform = gen_waveform(
-        duration_modified_labels, acoustic_features,
-        binary_dict, continuous_dict, acoustic_config.stream_sizes,
-        acoustic_config.has_dynamic_features,
-        config.acoustic.subphone_features, log_f0_conditioning,
-        pitch_idx, acoustic_config.num_windows,
-        config.acoustic.post_filter, config.sample_rate, config.frame_period,
+        duration_modified_labels,
+        acoustic_features,
+        binary_dict, continuous_dict,
+        config.acoustic.stream_sizes,
+        config.acoustic.has_dynamic_features,
+        config.acoustic.subphone_features,
+        log_f0_conditioning,
+        pitch_idx,
+        config.acoustic.num_windows,
+        config.acoustic.post_filter,
+        config.sample_rate,
+        config.frame_period,
         config.acoustic.relative_f0)
 
     return generated_waveform
 
 
-@hydra.main(config_path="conf/synthesis/config.yaml")
 def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None) -> None:
     """
     configファイルから各種設定を取得し、labファイルをもとにWAVファイルを生成する。
@@ -161,47 +202,21 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
     logger = getLogger(config.verbose)
     logger.info(config.pretty())
 
+    # hedファイルを全体で指定しているか、各モデルで設定しているかを判定する？
+    if config.question_path is not None:
+        config.timelag.question_path = config.question_path
+        config.duration.question_path = config.question_path
+        config.acoustic.question_path = config.question_path
+
     # GPUのCUDAが使えるかどうかを判定
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    # 使用モデルの学習済みファイルのパスを設定する。
     maybe_set_checkpoints_(config)
     maybe_set_normalization_stats_(config)
 
-    # timelagモデルに関するファイルを読み取る。
-    timelag_config = OmegaConf.load(
-        to_absolute_path(config.timelag.model_yaml))
-    timelag_model = hydra.utils.instantiate(timelag_config.netG).to(device)
-    checkpoint = torch.load(
-        to_absolute_path(config.timelag.checkpoint),
-        map_location=lambda storage, loc: storage)
-    timelag_model.load_state_dict(checkpoint["state_dict"])
-    timelag_in_scaler = joblib.load(
-        to_absolute_path(config.timelag.in_scaler_path))
-    timelag_out_scaler = joblib.load(
-        to_absolute_path(config.timelag.out_scaler_path))
-    timelag_model.eval()
-
-    # durationモデルに関するファイルを読み取る。
-    duration_config = OmegaConf.load(to_absolute_path(config.duration.model_yaml))
-    duration_model = hydra.utils.instantiate(duration_config.netG).to(device)
-    checkpoint = torch.load(
-        to_absolute_path(config.duration.checkpoint),
-        map_location=lambda storage, loc: storage)
-    duration_model.load_state_dict(checkpoint["state_dict"])
-    duration_in_scaler = joblib.load(to_absolute_path(config.duration.in_scaler_path))
-    duration_out_scaler = joblib.load(to_absolute_path(config.duration.out_scaler_path))
-    duration_model.eval()
-
-    # acousticモデルに関するファイルを読み取る。
-    acoustic_config = OmegaConf.load(
-        to_absolute_path(config.acoustic.model_yaml))
-    acoustic_model = hydra.utils.instantiate(acoustic_config.netG).to(device)
-    checkpoint = torch.load(
-        to_absolute_path(config.acoustic.checkpoint),
-        map_location=lambda storage, loc: storage)
-    acoustic_model.load_state_dict(checkpoint["state_dict"])
-    acoustic_in_scaler = joblib.load(to_absolute_path(config.acoustic.in_scaler_path))
-    acoustic_out_scaler = joblib.load(to_absolute_path(config.acoustic.out_scaler_path))
-    acoustic_model.eval()
+    # モデルに関するファイルを読み取る。
+    probably_load_models_(config, device)
 
     # Run synthesis for each utt.
     question_path = to_absolute_path(config.question_path)
@@ -222,49 +237,51 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
         out_wav_path = to_absolute_path(out_wav_path)
     logger.info("Synthesize the wav file: %s", out_wav_path)
 
-    wav = synthesis(
-        config, device, label_path, question_path,
-        timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
-        duration_model, duration_config, duration_in_scaler, duration_out_scaler,
-        acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler)
+    wav = synthesis(config, device, label_path, question_path)
 
     # 音量ノーマライズ
     if config.gain_normalize:
         wav = wav / np.max(np.abs(wav)) * (2**15 - 1)
 
     # サンプルレートとビット深度を指定してファイル出力
-    if str(config.bit_depth) in ('16', '16i', 'int16'):
-        wavfile.write(out_wav_path, rate=config.sample_rate, data=wav.astype(np.int16))
-    if str(config.bit_depth) in ('24', '24i', 'int24'):
-        wavfile.write(out_wav_path, rate=config.sample_rate, data=wav.astype(np.int16))
-    elif str(config.bit_depth) in ('32f', 'float32'):
-        wavfile.write(out_wav_path, rate=config.sample_rate, data=wav.astype(np.float32))
-    else:
-        logger.info('Sample_rate can take "16", "14" or "32f". This time render in 32f bit depth.')
-        wavfile.write(out_wav_path, rate=config.sample_rate, data=wav.astype(np.float32))
+    wav_data = probably_set_wav_data_(config, wav, logger)
+    wavfile.write(out_wav_path, rate=config.sample_rate, data=wav_data)
 
 
-def hts2wav(label_path: str, out_wav_path: str):
+def hts2wav(config: DictConfig, label_path: str, out_wav_path: str):
     """
     パスを指定して音声合成を実施する。
     ENUNU用にパスを指定しやすいようにwrapした。
     """
-    my_app(label_path=label_path, out_wav_path=out_wav_path)  # pylint: disable=E1120
+    my_app(config, label_path=label_path, out_wav_path=out_wav_path)
 
 
 def main():
     """
     手動起動したとき
     """
+    # コマンドライン引数に必要な情報があるかチェック
     try:
-        label_path = argv[1].strip('"')
-        out_wav_path = argv[2].strip('"')
+        voicebank_config_path = argv[1].strip('"')
+        label_path = argv[2].strip('"')
+        out_wav_path = argv[3].strip('"')
+    # コマンドライン引数が不足していれば標準入力で受ける
     except IndexError:
-        print('Please input the file path')
-        label_path = input('label_path  : ')
+        print('Please input voicebank\'s config file path\n>>> ')
+        voicebank_config_path = input().strip('"')
+        print('Please input label file path\n>>> ')
+        label_path = input().strip('"')
         out_wav_path = label_path.replace('.lab', '.wav')
-    hts2wav(label_path, out_wav_path)
+
+    # configファイルのパスを分割する
+    vb_config_dir = dirname(voicebank_config_path)
+    vb_config_name, config_ext = splitext(basename(voicebank_config_path))
+    if not config_ext in ('yml', 'yaml', 'YAML', 'YML'):
+        raise ValueError('Selected config file is not YAML file.')
+    # configファイルを読み取る
+    config = hydra.main(config_path=vb_config_dir, config_name=vb_config_name)
+    hts2wav(config, label_path, out_wav_path)
 
 
 if __name__ == '__main__':
-    main()
+    main()  # pylint: disable=E1120

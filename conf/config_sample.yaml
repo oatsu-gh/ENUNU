@@ -1,0 +1,72 @@
+# nnsvs/nnsvs/bin/conf/synthesys 以下のyamlファイルをまとめたい。
+
+# conf/synthesis/config.yaml から移植
+defaults:
+  - hydra/job_logging: colorlog
+  - hydra/hydra_logging: colorlog
+
+  # - timelag:         defaults
+  # - duration:        defaults
+  # - acoustic:        defaults
+
+verbose:               100
+
+# Setting for output WAV file.
+bit_depth:             32f
+sample_rate:           96000
+gain_normalize:        false
+
+# How was the model trained.
+frame_period:          5
+question_path:         "../hed/jp_qst_crazy_mono_005-2_enunu_182D.hed"
+log_f0_conditioning:   true
+
+# Use ground truth duration or not
+# if true, time-lag and duration models will not be used.
+ground_truth_duration: false
+
+
+# If not empty, try to search statisics in the directory
+stats_dir: "path/to/model_dir/bump/<singername>/norm"
+# If not empty, try to search models in the directory
+model_dir: "path/to/model_dir/exp/<singername_sometag>"
+# model_checkpoint:      best_loss.pth
+
+
+# conf/synthesis/acoustic/defaults.yaml から移植
+acoustic:
+    # (mgc, lf0, vuv, bap)
+    stream_sizes:          [180, 3, 1, 15]
+    has_dynamic_features:  [true, true, false, true]
+    num_windows:           3
+    # If None, automatically set based on stream sizes
+    stream_weights:
+
+    netG:
+      _target_:            nnsvs.model.Conv1dResnet
+      in_dim:              186
+      out_dim:             199
+      hidden_dim:          128
+      num_layers:          6
+      dropout:             0.1
+
+
+# conf/synthesis/duration/defaults.yaml から移植
+duration:
+    question_path:
+    checkpoint:
+    # in_scaler_path:
+    # out_scaler_path:
+    model_yaml:
+
+
+# conf/synthesis/timelag/defaults.yaml から移植
+timelag:
+    question_path:
+    checkpoint:
+    in_scaler_path:
+    out_scaler_path:
+    model_yaml:
+
+    allowed_range:         [-20, 20]  # in frames
+    allowed_range_rest:    [-40, 40]
