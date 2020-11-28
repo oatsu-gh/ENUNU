@@ -161,6 +161,22 @@ def convert_ustobj_to_htsfulllabelobj(
     return full_label
 
 
+def ust2hts(path_ust, path_hts, path_table):
+    """
+    USTファイルをLABファイルに変換する。
+    """
+    ust = up.ust.load(path_ust)
+    table = up.table.load(path_table, encoding='sjis')
+    # Ust → HTSFullLabel
+    full_label = convert_ustobj_to_htsfulllabelobj(ust, table)
+    full_label.generate_songobj()
+    full_label.fill_contexts_from_songobj()
+    # 整合性チェック
+    full_label.song.check()
+    # ファイル出力
+    full_label.write(path_hts, strict_sinsy_style=True)
+
+
 def main():
     """
     USTファイルをLABファイルおよびJSONファイルに変換する。
@@ -187,4 +203,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    input('press enter')
