@@ -6,19 +6,20 @@
   - 音源のフォルダを特定する。
   - プロジェクトもしくはUSTファイルのパスを特定する。
 2. LABファイルを(一時的に)生成する
-  - キャッシュフォルダでいいと思う。
+  - キャッシュフォルダ
 3. LABファイル→WAVファイル
 """
 
 from datetime import datetime
 from os import chdir, getcwd, makedirs
-from os.path import relpath, splitdrive, splitext
+from os.path import dirname, relpath, splitdrive, splitext
+from subprocess import Popen
 from sys import argv
 
 import utaupy as up
+from hydra.experimental import compose, initialize
 from hts2json import hts2json
 from hts2wav import hts2wav
-from hydra.experimental import compose, initialize
 from ust2hts import convert_ustobj_to_htsfulllabelobj
 
 
@@ -47,39 +48,44 @@ def utauplugin2hts(path_plugin, path_hts, path_table, check=True, strict_sinsy_s
 
     # プラグイン用一時ファイルを読み取る
     plugin = up.utauplugin.load(path_plugin)
-    print('len(plugin.notes)', len(plugin.notes))
-    # [#PREV] のノートを追加する
-    if plugin.previous_note is None:
-        prev_note_exits = False
-    else:
+
+    # [#PREV] や [#NEXT] が含まれているか判定
+    prev_exists = not plugin.next_note is None
+    next_exists = not plugin.next_note is None
+    if prev_exists:
         plugin.notes.insert(0, plugin.previous_note)
-        prev_note_exits = True
-    # [#NEXT] のノートを追加する
-    if plugin.next_note is None:
-        next_note_exists = False
-    else:
+    if next_exists:
         plugin.notes.append(plugin.next_note)
-        next_note_exists = True
-    print('len(plugin.notes)', len(plugin.notes))
 
     # Ust → HTSFullLabel
     full_label = convert_ustobj_to_htsfulllabelobj(plugin, table)
+
     # HTSFullLabel中の重複データを削除して整理
     full_label.generate_songobj()
     full_label.fill_contexts_from_songobj()
+    full_label.write(path_hts.replace('.lab', '途中.lab'),
+                     encoding='utf-8',
+                     strict_sinsy_style=strict_sinsy_style)
+    hts2json(path_hts.replace('.lab', '途中.lab'),
+             path_hts.replace('.lab', '途中.json'))
 
-    print('len(full_label):', len(full_label))
-    # [#PREV] のノート(の情報がある行)を削ると [#NEXT]
-    if prev_note_exits:
+    # [#PREV] と [#NEXT] を消す前の状態での休符周辺のコンテキストを調整する
+    if any((prev_exists, next_exists)):
+        full_label = up.hts.adjust_syllables_to_sinsy(full_label)
+        full_label = up.hts.adjust_notes_to_sinsy(full_label, strict=strict_sinsy_style)
+
+    # [#PREV] のノート(の情報がある行)を削る
+    if prev_exists:
         del full_label[0]
-        while full_label[0].syllable.position != 1:
+        while (not full_label[0].phoneme.position == 1
+               and full_label[0].syllable.position == 1):
             del full_label[0]
-    # [#NEXT] のノート(の情報がある行)を削ると [#NEXT]
-    if next_note_exists:
+    # [#NEXT] のノート(の情報がある行)を削る
+    if next_exists:
         del full_label[-1]
-        while full_label[-1].syllable.position_backward != 1:
+        while (not full_label[-1].phoneme.position_backward == 1
+               and full_label[-1].syllable.position_backward == 1):
             del full_label[-1]
-    print('len(full_label):', len(full_label))
 
     # 整合性チェック
     if check:
@@ -94,7 +100,7 @@ def main(path_plugin: str):
     """
     # UTAUの一時ファイルに書いてある設定を読み取って捨てる
     plugin = up.utauplugin.load(path_plugin)
-    str_now = datetime.now().strftime('%Y%m%d%h%M%S')
+    str_now = datetime.now().strftime('%Y%m%d%H%M%S')
     path_ust, voice_dir, cache_dir = get_project_path(plugin)
     del plugin
 
@@ -104,7 +110,7 @@ def main(path_plugin: str):
     if splitdrive(voice_dir)[0] != splitdrive(getcwd())[0]:
         chdir(voice_dir)
     # configファイルを読み取る
-    initialize(config_path=relpath(voice_dir))
+    initialize(config_path=relpath(voice_dir, dirname(__file__)))
     cfg = compose(config_name=enuconfig_name, overrides=[f'+config_path="{relpath(voice_dir)}"'])
 
     # 入出力パスを設定する
@@ -118,12 +124,15 @@ def main(path_plugin: str):
 
     # ファイル処理
     strict_sinsy_style = not cfg.trained_for_enunu
-    utauplugin2hts(path_plugin, path_lab, path_table, check=True, strict_sinsy_style=strict_sinsy_style)
+    utauplugin2hts(path_plugin, path_lab, path_table, check=True,
+                   strict_sinsy_style=strict_sinsy_style)
     hts2json(path_lab, path_json)
     hts2wav(cfg, path_lab, path_wav)
+    Popen(['start', path_wav], shell=True)
 
 
 if __name__ == '__main__':
+    print(argv)
     if len(argv) == 2:
         main(argv[1])
     elif len(argv) == 1:
