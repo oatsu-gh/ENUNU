@@ -161,44 +161,38 @@ def convert_ustobj_to_htsfulllabelobj(
     return full_label
 
 
-def ust2hts(path_ust, path_hts, path_table):
+def ust2hts(path_ust: str, path_hts: str, path_table: str,
+            check: bool = True, strict_sinsy_style: bool = True):
     """
     USTファイルをLABファイルに変換する。
     """
     ust = up.ust.load(path_ust)
-    table = up.table.load(path_table, encoding='sjis')
+    table = up.table.load(path_table, encoding='utf-8')
     # Ust → HTSFullLabel
     full_label = convert_ustobj_to_htsfulllabelobj(ust, table)
+    # HTSFullLabel中の重複データを削除して整理
     full_label.generate_songobj()
     full_label.fill_contexts_from_songobj()
     # 整合性チェック
-    full_label.song.check()
+    if check:
+        full_label.song.check()
     # ファイル出力
-    full_label.write(path_hts, strict_sinsy_style=True)
+    full_label.write(path_hts, strict_sinsy_style=strict_sinsy_style)
 
 
 def main():
     """
     USTファイルをLABファイルおよびJSONファイルに変換する。
     """
+    # 各種パスを指定
     path_table = 'dic/kana2romaji_utf-8_for_oto2lab .table'
-    d_table = up.table.load(path_table, encoding='sjis')
-
-    path_ust = input('path_ust: ').strip('"')
-    path_hts = 'test/' + splitext(basename(path_ust))[0] + '_ust2hts.lab'
-    path_json = 'test/' + splitext(basename(path_ust))[0] + '_ust2hts.json'
-    ust = up.ust.load(path_ust)
-
-    # Ust → HTSFullLabel
-    full_label = convert_ustobj_to_htsfulllabelobj(ust, d_table)
-    # HTSFullLabel中の重複データを削除して整理
-    full_label.generate_songobj()
-    full_label.fill_contexts_from_songobj()
-    # 音素数などの整合性をチェック
-    full_label.song.check()
-    # ファイル出力
-    full_label.write(path_hts, strict_sinsy_style=True)
-    hts2json(path_hts, path_json)
+    path_ust_in = input('path_ust: ').strip('"')
+    path_hts_out = 'test/' + splitext(basename(path_ust_in))[0] + '_ust2hts.lab'
+    path_json_out = 'test/' + splitext(basename(path_ust_in))[0] + '_ust2hts.json'
+    # 変換
+    ust2hts(path_ust_in, path_hts_out, path_table, check=True, strict_sinsy_style=True)
+    # jsonファイルにも出力する。
+    hts2json(path_hts_out, path_json_out)
 
 
 if __name__ == '__main__':

@@ -60,19 +60,20 @@ from omegaconf import DictConfig, OmegaConf
 from scipy.io import wavfile
 
 
-def to_more_absolute_path(config_path, relative_path):
-    """
-    hydra.utils.to_absolute_path の基準となるパスを、
-    実行フォルダではなくモデルのあるフォルダにする。
-    """
-    return join(config_path, relative_path)
+# def join(config_path, relative_path):
+#     """
+#     hydra.utils.to_absolute_path の基準となるパスを、
+#     実行フォルダではなくモデルのあるフォルダにする。
+#     """
+#     return join(config_path, relative_path)
+
 
 
 def maybe_set_checkpoints_(config):
     """
     configファイルを参考に、使用するチェックポイントを設定する。
     """
-    model_dir = to_more_absolute_path(config.config_path, config.model_dir)
+    model_dir = join(config.config_path, config.model_dir)
     for typ in ('timelag', 'duration', 'acoustic'):
         # checkpoint of each model
         if config[typ].checkpoint is None:
@@ -84,7 +85,7 @@ def maybe_set_normalization_stats_(config):
     """
     configファイルを参考に、使用する *_scaler.joblib ファイルを設定する。
     """
-    stats_dir = to_more_absolute_path(config.config_path, config.stats_dir)
+    stats_dir = join(config.config_path, config.stats_dir)
 
     for typ in ('timelag', 'duration', 'acoustic'):
         # I/O path of scalar file for each model
@@ -116,25 +117,17 @@ def generate_wav_file(config: DictConfig, wav, out_wav_path, logger):
 
 def set_each_question_path(config):
     """
-    qstを読み取るのとか、f0コンディションを毎回計算するのとか行数が増えてめんどくさい
+    qstを読み取るのめんどくさい
     """
     config_path = config.config_path
     # hedファイルを全体で指定しているか、各モデルで設定しているかを判定する
-    # 別々のhedファイルを使うのはまだ想定していないみたい。
-    if config.question_path is not None:
-        config.timelag.question_path = to_more_absolute_path(
-            config_path, config.question_path)
-        config.duration.question_path = to_more_absolute_path(
-            config_path, config.question_path)
-        config.acoustic.question_path = to_more_absolute_path(
-            config_path, config.question_path)
-    else:
-        config.timelag.question_path = to_more_absolute_path(
-            config_path, config.timelag.question_path)
-        config.duration.question_path = to_more_absolute_path(
-            config_path, config.duration.question_path)
-        config.acoustic.question_path = to_more_absolute_path(
-            config_path, config.acoustic.question_path)
+    for typ in ('timelag', 'duration', 'acoustic'):
+        if config[typ].question_path is None:
+            config[typ].question_path = join(
+                config_path, config.question_path)
+        else:
+            config[typ].question_path = join(
+                config_path, config[typ].question_path)
 
 
 def load_qst(question_path, append_hat_for_LL=False) -> tuple:
@@ -256,53 +249,53 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
     # モデルに関するファイルを読み取る。
     # timelag
     timelag_model = hydra.utils.instantiate(config.timelag.netG).to(device)
-    checkpoint = torch.load(to_more_absolute_path(config_path, config.timelag.checkpoint),
+    checkpoint = torch.load(join(config_path, config.timelag.checkpoint),
                             map_location=lambda storage, loc: storage)
     timelag_model.load_state_dict(checkpoint["state_dict"])
-    timelag_in_scaler = joblib.load(to_more_absolute_path(
+    timelag_in_scaler = joblib.load(join(
         config_path, config.timelag.in_scaler_path))
-    timelag_out_scaler = joblib.load(to_more_absolute_path(
+    timelag_out_scaler = joblib.load(join(
         config_path, config.timelag.out_scaler_path))
     timelag_model.eval()
 
     # duration
     duration_model = hydra.utils.instantiate(config.duration.netG).to(device)
-    checkpoint = torch.load(to_more_absolute_path(config_path, config.duration.checkpoint),
+    checkpoint = torch.load(join(config_path, config.duration.checkpoint),
                             map_location=lambda storage, loc: storage)
     duration_model.load_state_dict(checkpoint["state_dict"])
-    duration_in_scaler = joblib.load(to_more_absolute_path(
+    duration_in_scaler = joblib.load(join(
         config_path, config.duration.in_scaler_path))
-    duration_out_scaler = joblib.load(to_more_absolute_path(
+    duration_out_scaler = joblib.load(join(
         config_path, config.duration.out_scaler_path))
     duration_model.eval()
 
     # acoustic model
     acoustic_model = hydra.utils.instantiate(config.acoustic.netG).to(device)
-    checkpoint = torch.load(to_more_absolute_path(config_path, config.acoustic.checkpoint),
+    checkpoint = torch.load(join(config_path, config.acoustic.checkpoint),
                             map_location=lambda storage, loc: storage)
     acoustic_model.load_state_dict(checkpoint["state_dict"])
-    acoustic_in_scaler = joblib.load(to_more_absolute_path(
+    acoustic_in_scaler = joblib.load(join(
         config_path, config.acoustic.in_scaler_path))
-    acoustic_out_scaler = joblib.load(to_more_absolute_path(
+    acoustic_out_scaler = joblib.load(join(
         config_path, config.acoustic.out_scaler_path))
     acoustic_model.eval()
 
     # 設定を表示
-    print(OmegaConf.to_yaml(config))
+    # print(OmegaConf.to_yaml(config))
     # synthesize wav file from lab file.
     # 入力するラベルファイルを指定。
     if label_path is None:
         assert config.label_path is not None
-        label_path = to_more_absolute_path(config_path, config.label_path)
+        label_path = join(config_path, config.label_path)
     else:
-        label_path = to_more_absolute_path(config_path, label_path)
+        label_path = join(config_path, label_path)
     logger.info('Process the label file: %s', label_path)
 
     # 出力するwavファイルの設定。
     if out_wav_path is None:
-        out_wav_path = to_more_absolute_path(config_path, config.out_wav_path)
+        out_wav_path = join(config_path, config.out_wav_path)
     else:
-        out_wav_path = to_more_absolute_path(config_path, out_wav_path)
+        out_wav_path = join(config_path, out_wav_path)
     logger.info('Synthesize the wav file: %s', out_wav_path)
     wav = synthesis(
         config, device, label_path,
@@ -352,4 +345,5 @@ def main():
 
 
 if __name__ == '__main__':
+    print('Importing modules. Please wait several seconds.')
     main()
