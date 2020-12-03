@@ -1,0 +1,4 @@
+type=editplugin
+folder=enunu-0.0.0-dummy
+contentsdir=
+description=NNSVSを利用したUTAUプラグイン
