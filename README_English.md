@@ -10,10 +10,10 @@ This README_English.md file was transelated from README.md written in Japanese, 
 
 ## Usage
 
-1. Open UST and set the UTAU sound source containing the ENUNU model to the original sound file set.
+1. Open UST and set the UTAU sound source containing the ENUNU model as VB.
    ex.) "おふとんP (ENUNU)" : NNSVS Ofuton-P singing voice model for ENUNU
-2. The lyrics of UST are written in hiragana alone.
-3. Select the part you want to play and launch ENUNU as a plug-in.
+2. Set Hiragana-CV lyric to each note.
+3. Select the notes you want to play and launch ENUNU as a plug-in.
 4. ~ Wait a few seconds or minutes ~
 5. The selected WAV file is created in the same folder as the UST file.
 
