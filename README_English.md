@@ -21,7 +21,7 @@ This README_English.md file was transelated from README.md written in Japanese, 
 
 - It is recommended to include the consonant in the previous note.
   - \[さ]\[っ]\[ぽ]\[ろ] → \[さっ]\[ぽ]\[ろ]
-- It does not support multi-character hiragana lyrics except for the consonant.
+- It does not support multi-syllable-hiragana-lyric in one note, except for "っ".
  Lets you enter phonemes directly, separated by spaces. Can be used with hiragana, but cannot be mixed in one note.
   - \[い]\[ら]\[ん]\[か]\[ら]\[ぷ]\[て] → \[i]\[r a]\[N]\[k a]\[ら]\[p]\[て]
 - You can have more than one syllable in a note by entering phonemes directly.
