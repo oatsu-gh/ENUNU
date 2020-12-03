@@ -7,5 +7,5 @@ omegaconf
 scipy
 torch
 tqdm
-utaupy >= 1.9
+utaupy >= 1.10
 pyyaml
