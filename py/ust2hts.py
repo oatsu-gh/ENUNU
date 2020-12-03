@@ -98,13 +98,12 @@ def convert_ustobj_to_htsfulllabelobj(
         t_end = t_start + (note.length_ms * 10000)
         lyric = note.lyric
         notenum = note.notenum
-        if lyric.endswith('っ'):
-            phonemes = d_table[lyric[:-1]].append('cl')
-        try:
-            phonemes = d_table[lyric]
-        except KeyError as ke:
-            phonemes = lyric.split()
-            print('KeyError:', ke)
+        if lyric.endswith('っ') and not lyric == 'っ':
+            phonemes = d_table.get(lyric[:-1], lyric[:-1].split())
+            phonemes.append('cl')
+        else:
+            phonemes = d_table.get(lyric, lyric.split())
+        # print(f'{lyric} -> {phonemes}')  # デバッグ用出力
         for idx_ph, phoneme in enumerate(phonemes):
             ol = up.hts.OneLine()
             # 時刻の処理

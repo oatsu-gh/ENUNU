@@ -312,12 +312,12 @@ def main():
     手動起動したとき
     """
     # コマンドライン引数に必要な情報があるかチェック
-    try:
+    if len(argv) >= 4:
         voicebank_config_yaml_path = argv[1].strip('"')
         label_path = argv[2].strip('"')
         out_wav_path = argv[3].strip('"')
     # コマンドライン引数が不足していれば標準入力で受ける
-    except IndexError:
+    else:
         voicebank_config_yaml_path = \
             input('Please input voicebank\'s config file path\n>>> ').strip('"')
         label_path = \
@@ -336,5 +336,4 @@ def main():
 
 
 if __name__ == '__main__':
-    print('Importing modules. Please wait several seconds.')
     main()

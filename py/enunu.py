@@ -6,7 +6,7 @@
   - 音源のフォルダを特定する。
   - プロジェクトもしくはUSTファイルのパスを特定する。
 2. LABファイルを(一時的に)生成する
-  - キャッシュフォルダ
+  - キャッシュフォルダでいいと思う。
 3. LABファイル→WAVファイル
 """
 
@@ -50,7 +50,7 @@ def utauplugin2hts(path_plugin, path_hts, path_table, check=True, strict_sinsy_s
     plugin = up.utauplugin.load(path_plugin)
 
     # [#PREV] や [#NEXT] が含まれているか判定
-    prev_exists = not plugin.next_note is None
+    prev_exists = not plugin.previous_note is None
     next_exists = not plugin.next_note is None
     if prev_exists:
         plugin.notes.insert(0, plugin.previous_note)
@@ -63,11 +63,13 @@ def utauplugin2hts(path_plugin, path_hts, path_table, check=True, strict_sinsy_s
     # HTSFullLabel中の重複データを削除して整理
     full_label.generate_songobj()
     full_label.fill_contexts_from_songobj()
-    full_label.write(path_hts.replace('.lab', '途中.lab'),
-                     encoding='utf-8',
-                     strict_sinsy_style=strict_sinsy_style)
-    hts2json(path_hts.replace('.lab', '途中.lab'),
-             path_hts.replace('.lab', '途中.json'))
+
+    # デバッグ用
+    # full_label.write(path_hts.replace('.lab', '途中.lab'),
+    #                  encoding='utf-8',
+    #                  strict_sinsy_style=strict_sinsy_style)
+    # hts2json(path_hts.replace('.lab', '途中.lab'),
+    #          path_hts.replace('.lab', '途中.json'))
 
     # [#PREV] と [#NEXT] を消す前の状態での休符周辺のコンテキストを調整する
     if any((prev_exists, next_exists)):
@@ -98,12 +100,14 @@ def main(path_plugin: str):
     """
     UtauPluginオブジェクトから音声ファイルを作る
     """
+    print(f'{datetime.now()} : reading setting in ust')
     # UTAUの一時ファイルに書いてある設定を読み取って捨てる
     plugin = up.utauplugin.load(path_plugin)
     str_now = datetime.now().strftime('%Y%m%d%H%M%S')
     path_ust, voice_dir, cache_dir = get_project_path(plugin)
     del plugin
 
+    print(f'{datetime.now()} : reading enuconfig')
     # 使用するモデルの設定
     enuconfig_name = 'enuconfig'
     # ドライブが違うとrelpathが使えないので、カレントディレクトリを変更する
@@ -119,20 +123,27 @@ def main(path_plugin: str):
     path_wav = f'{splitext(path_ust)[0]}__{str_now}.wav'
     # 変換テーブル(歌詞→音素)のパス
     path_table = f'{voice_dir}/{cfg.table_path}'
+
     # キャッシュフォルダがなければつくる
     makedirs(cache_dir, exist_ok=True)
 
     # ファイル処理
     strict_sinsy_style = not cfg.trained_for_enunu
-    utauplugin2hts(path_plugin, path_lab, path_table, check=True,
+    print(f'{datetime.now()} : converting TMP to LAB')
+    utauplugin2hts(path_plugin, path_lab, path_table, check=False,
                    strict_sinsy_style=strict_sinsy_style)
+    print(f'{datetime.now()} : converting LAB to JSON')
     hts2json(path_lab, path_json)
+    print(f'{datetime.now()} : converting LAB to WAV')
     hts2wav(cfg, path_lab, path_wav)
+    print(f'{datetime.now()} : generated WAV')
+    # input('Press Enter.')
     Popen(['start', path_wav], shell=True)
 
 
 if __name__ == '__main__':
-    print(argv)
+    print('_____ξ ・ヮ・)ξ < ENUNU v0.0.1 ________')
+    print(f'argv: {argv}')
     if len(argv) == 2:
         main(argv[1])
     elif len(argv) == 1:
