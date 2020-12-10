@@ -96,12 +96,16 @@ def generate_wav_file(config: DictConfig, wav, out_wav_path, logger):
     elif str(config.bit_depth) == '32':
         if config.gain_normalize:
             wav = 2147483647 * wav / np.max(np.abs(wav))
+        else:
+            wav = 65536 * wav
         wav = wav.astype(np.int32)
     else:
         logger.warn(
             'sample_rate can take \'16\' or \'32\'. This time render in 32bit int depth.')
         if config.gain_normalize:
             wav = 2147483647 * wav / np.max(np.abs(wav))
+        else:
+            wav = 65536 * wav
         wav = wav.astype(np.int32)
     wavfile.write(out_wav_path, rate=config.sample_rate, data=wav)
 

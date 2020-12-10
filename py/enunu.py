@@ -142,7 +142,7 @@ def main(path_plugin: str):
 
 
 if __name__ == '__main__':
-    print('_____ξ ・ヮ・)ξ < ENUNU v0.0.1 ________')
+    print('_____ξ ・ヮ・)ξ < ENUNU v0.0.3 ________')
     print(f'argv: {argv}')
     if len(argv) == 2:
         main(argv[1])
