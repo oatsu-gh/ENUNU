@@ -6,7 +6,19 @@ python scripts for ENUNU
 
 ### enunu.py
 
-USTファイルを受け取って動作するスタンドアロンまたはUTUAプラグインとして、全体の動作を行うスクリプト。
+UTAUプラグインまたはUTAUエンジンとして、全体の動作を行うスクリプト。スタンドアロン実行は実装準備中。
+
+### enusampler.py
+
+UTAUエンジンのうち、tool2 の resampler の代わりの処理をするスクリプト。**enusampler.exe** に変換して実行する。ダミーエンジンとして動作するため、処理は皆無。
+
+### enusampler.c
+
+pyinstallerを使うくらいならC言語でexe作ったほうがいいと思った。ダミーなので何もしない。
+
+### enutool.py
+
+UTAUエンジンのうち、tool1 の wavtool の代わりの処理をするスクリプト。**enutool.exe** に変換して実行する。last_will.txt を実行時に残し、タイミングを見計らって enunu.py を起動する役割を持つ。
 
 ### hts2json.py
 
