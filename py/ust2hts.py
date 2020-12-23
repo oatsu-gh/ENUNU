@@ -160,8 +160,8 @@ def convert_ustobj_to_htsfulllabelobj(
     return full_label
 
 
-def ust2hts(path_ust: str, path_hts: str, path_table: str,
-            check: bool = True, strict_sinsy_style: bool = True):
+def ust2hts(path_ust: str, path_hts: str, path_table: str, check: bool = True,
+            strict_sinsy_style: bool = True):
     """
     USTファイルをLABファイルに変換する。
     """

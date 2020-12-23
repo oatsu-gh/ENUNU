@@ -1,4 +1,6 @@
 *.spec
+*.exe
+*.bat
 outputs
 dist
 build
