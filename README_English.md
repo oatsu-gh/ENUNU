@@ -25,7 +25,7 @@ This README_English.md file was transelated from README.md written in Japanese, 
  Lets you enter phonemes directly, separated by spaces. Can be used with hiragana, but cannot be mixed in one note.
   - \[い]\[ら]\[ん]\[か]\[ら]\[ぷ]\[て] → \[i]\[r a]\[N]\[k a]\[ら]\[p]\[て]
 - You can have more than one syllable in a note by entering phonemes directly.
-  - \[さっ]\[ぽ]\[ろ] → \[さっ]\[po ro]
+  - \[さっ]\[ぽ]\[ろ] → \[さっ]\[p o r o]
 
 ## Terms of Use
 
