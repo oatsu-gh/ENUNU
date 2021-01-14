@@ -1,6 +1,7 @@
 *.spec
 *.exe
 *.bat
-outputs
 dist
+exe
+outputs
 build

@@ -64,7 +64,6 @@ def utauplugin2hts(path_plugin, path_hts, path_table, check=True, strict_sinsy_s
 
     # HTSFullLabel中の重複データを削除して整理
     full_label.generate_songobj()
-    full_label.fill_contexts_from_songobj()
 
     # デバッグ用
     # full_label.write(path_hts.replace('.lab', '途中.lab'),
@@ -75,8 +74,7 @@ def utauplugin2hts(path_plugin, path_hts, path_table, check=True, strict_sinsy_s
 
     # [#PREV] と [#NEXT] を消す前の状態での休符周辺のコンテキストを調整する
     if any((prev_exists, next_exists)):
-        full_label = up.hts.adjust_syllables_to_sinsy(full_label)
-        full_label = up.hts.adjust_notes_to_sinsy(full_label, strict=strict_sinsy_style)
+        full_label = up.hts.adjust_pau_contexts(full_label, strict=strict_sinsy_style)
 
     # [#PREV] のノート(の情報がある行)を削る
     if prev_exists:
@@ -94,8 +92,11 @@ def utauplugin2hts(path_plugin, path_hts, path_table, check=True, strict_sinsy_s
     # 整合性チェック
     if check:
         full_label.song.check()
+
     # ファイル出力
-    full_label.write(path_hts, encoding='utf-8', strict_sinsy_style=strict_sinsy_style)
+    s = '\n'.join(list(map(str, full_label)))
+    with open(path_hts, mode = 'w',encoding='utf-8') as f:
+        f.write(s)
 
 
 def main_as_plugin(path_plugin: str) -> str:
