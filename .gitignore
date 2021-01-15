@@ -1,6 +1,7 @@
 *.exe
 *.wav
 *.pth
+*.cache
 data
 dump
 outputs
