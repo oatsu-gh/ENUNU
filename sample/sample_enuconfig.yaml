@@ -28,7 +28,7 @@ verbose:                  100
 
 # Setting for output WAV file.
 sample_rate:              96000
-gain_normalize:           true
+gain_normalize:           false
 
 # How was the model trained.
 frame_period:             5
