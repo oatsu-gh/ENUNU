@@ -22,7 +22,7 @@ from hydra.experimental import compose, initialize
 from bat2ust import bat2ust
 from hts2json import hts2json
 from hts2wav import hts2wav
-from ust2hts import convert_ustobj_to_htsfulllabelobj, ust2hts
+from ust2hts import convert_ustobj_to_songobj, ust2hts
 
 
 def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
@@ -39,7 +39,7 @@ def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
     return path_ust, voice_dir, cache_dir
 
 
-def utauplugin2hts(path_plugin, path_hts, path_table, check=True, strict_sinsy_style=False):
+def utauplugin2hts(path_plugin, path_hts, path_table, strict_sinsy_style=False):
     """
     USTじゃなくてUTAUプラグイン用に最適化する。
     ust2hts.py 中の ust2hts を改変して、
@@ -60,10 +60,10 @@ def utauplugin2hts(path_plugin, path_hts, path_table, check=True, strict_sinsy_s
         plugin.notes.append(plugin.next_note)
 
     # Ust → HTSFullLabel
-    full_label = convert_ustobj_to_htsfulllabelobj(plugin, table)
-
-    # HTSFullLabel中の重複データを削除して整理
-    full_label.generate_songobj()
+    song = convert_ustobj_to_songobj(plugin, table)
+    full_label = up.hts.HTSFullLabel()
+    full_label.song = song
+    full_label.fill_contexts_from_songobj()
 
     # デバッグ用
     # full_label.write(path_hts.replace('.lab', '途中.lab'),
@@ -78,20 +78,14 @@ def utauplugin2hts(path_plugin, path_hts, path_table, check=True, strict_sinsy_s
 
     # [#PREV] のノート(の情報がある行)を削る
     if prev_exists:
-        del full_label[0]
-        while (not full_label[0].phoneme.position == 1
-               and full_label[0].syllable.position == 1):
+        target_note = full_label[0].note
+        while full_label[0].note is target_note:
             del full_label[0]
     # [#NEXT] のノート(の情報がある行)を削る
     if next_exists:
-        del full_label[-1]
-        while (not full_label[-1].phoneme.position_backward == 1
-               and full_label[-1].syllable.position_backward == 1):
+        target_note = full_label[-1].note
+        while full_label[-1].note is target_note:
             del full_label[-1]
-
-    # 整合性チェック
-    if check:
-        full_label.song.check()
 
     # ファイル出力
     s = '\n'.join(list(map(str, full_label)))
@@ -136,8 +130,7 @@ def main_as_plugin(path_plugin: str) -> str:
     # ファイル処理
     strict_sinsy_style = not cfg.trained_for_enunu
     print(f'{datetime.now()} : converting TMP to LAB')
-    utauplugin2hts(path_plugin, path_lab, path_table, check=False,
-                   strict_sinsy_style=strict_sinsy_style)
+    utauplugin2hts(path_plugin, path_lab, path_table, strict_sinsy_style=strict_sinsy_style)
     print(f'{datetime.now()} : converting LAB to JSON')
     hts2json(path_lab, path_json)
     print(f'{datetime.now()} : converting LAB to WAV')
@@ -189,7 +182,7 @@ def main_as_engine(path_tempbat: str) -> str:
     strict_sinsy_style = not cfg.trained_for_enunu
     # ファイル処理
     print(f'{datetime.now()} : converting UST to LAB')
-    ust2hts(path_ust, path_lab, path_table, check=True, strict_sinsy_style=strict_sinsy_style)
+    ust2hts(path_ust, path_lab, path_table, strict_sinsy_style=strict_sinsy_style)
     print(f'{datetime.now()} : converting LAB to JSON')
     hts2json(path_lab, path_json)
     print(f'{datetime.now()} : converting LAB to WAV')

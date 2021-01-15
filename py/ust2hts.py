@@ -90,7 +90,6 @@ def convert_ustobj_to_songobj(
 
     key_of_the_note:
         曲のキーだが、USTからは判定できない。
-        12の倍数かつSinsyではあり得ない120を設定している。
         Sinsyでは 0 ~ 11 または 'xx' である。
     """
     song = up.hts.Song()
@@ -133,7 +132,7 @@ def main():
     path_json_out = \
         dirname(path_ust_in) + '/' + splitext(basename(path_ust_in))[0] + '_ust2hts.json'
     # 変換
-    ust2hts(path_ust_in, path_hts_out, path_table, strict_sinsy_style=True)
+    ust2hts(path_ust_in, path_hts_out, path_table, strict_sinsy_style=False)
     # jsonファイルにも出力する。
     hts2json(path_hts_out, path_json_out)
 
