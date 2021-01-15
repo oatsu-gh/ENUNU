@@ -4,7 +4,7 @@
 """
 USTファイルをHTSフルラベルに変換する。
 コンテキストは最低限。
-Musicオブジェクトを経由せずにOneLineオブジェクトを直接生成していく。
+Songオブジェクトを使って生成する。
 
 適用するコンテキストは
 [jp_qst_crazy_mono_005.hed](https://github.com/oatsu-gh/nnsvs-custom-stripts/tree/master/hed)
