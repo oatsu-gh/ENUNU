@@ -31,7 +31,7 @@ d3, e3, f3 には 'xx' を代入する。休符の学習データ引っ張って
 from os.path import basename, dirname, splitext
 
 import utaupy as up
-from hts2json import hts2json
+from utaupy.utils import hts2json
 
 # from pprint import pprint
 

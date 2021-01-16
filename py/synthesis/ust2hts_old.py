@@ -32,7 +32,7 @@ d3, e3, f3 には 'xx' を代入する。休符の学習データ引っ張って
 from os.path import basename, splitext
 
 import utaupy as up
-from hts2json import hts2json
+from utaupy.utils import hts2json
 
 # from pprint import pprint
 
@@ -86,8 +86,6 @@ def convert_ustobj_to_htsfulllabelobj(
         12の倍数かつSinsyではあり得ない120を設定している。
         Sinsyでは 0 ~ 11 または 'xx' である。
     """
-    # TODO: 促音が入っている(音節が複数になる)ときの処理を追加 **しました**。
-    # DEBUG: 促音デバッグをすること。未検証。
     # e3 に対応する数値で、曲ごとに決まっている。スケール判定の結果っぽい。
     full_label = up.hts.HTSFullLabel()
 
