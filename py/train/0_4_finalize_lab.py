@@ -110,8 +110,10 @@ def prepare_data_for_acoustic_models(
     makedirs(label_phone_score_dir, exist_ok=True)
 
     # wavファイルを分割して保存する
-    for path_wav in tqdm(wav_files):
+    print('Split wav files')
+    for i, path_wav in enumerate(wav_files, 1):
         songname = splitext(basename(path_wav))[0]
+        print(f'{i}\t{songname}')
         corresponding_full_dtw_seg_files = [
             path for path in full_dtw_seg_files if f'{songname}_seg' in path
         ]
@@ -146,18 +148,18 @@ def main(path_config_yaml):
     wav_files = sorted(glob(f'{db_root}/**/*.wav', recursive=True))
 
     # フルラベルをtimelag用のフォルダに保存する。
-    print('----- Preparing data for time-lag models -----')
+    print('Preparing data for time-lag models')
     timelag_dir = f'{out_dir}/timelag'
     prepare_data_for_timelag_models(full_dtw_seg_files, sinsy_full_round_seg_files, timelag_dir)
 
     # フルラベルのオフセット修正をして、duration用のフォルダに保存する。
-    print('----- Preparing data for acoustic models -----')
+    print('Preparing data for acoustic models')
     duration_dir = f'{out_dir}/duration'
     prepare_data_for_duration_models(full_dtw_seg_files, duration_dir)
 
     # フルラベルのオフセット修正をして、acoustic用のフォルダに保存する。
     # wavファイルをlabファイルのセグメントに合わせて切断
-    print('----- Preparing data for acoustic models -----')
+    print('Preparing data for acoustic models')
     acoustic_dir = f'{out_dir}/acoustic'
     prepare_data_for_acoustic_models(
         full_dtw_seg_files, sinsy_full_round_seg_files, wav_files, acoustic_dir)
