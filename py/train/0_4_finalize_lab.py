@@ -111,9 +111,8 @@ def prepare_data_for_acoustic_models(
 
     # wavファイルを分割して保存する
     print('Split wav files')
-    for i, path_wav in enumerate(wav_files, 1):
+    for path_wav in tqdm(wav_files):
         songname = splitext(basename(path_wav))[0]
-        print(f'{i}\t{songname}')
         corresponding_full_dtw_seg_files = [
             path for path in full_dtw_seg_files if f'{songname}_seg' in path
         ]
