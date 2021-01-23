@@ -10,13 +10,16 @@ from glob import glob
 from os import makedirs
 from os.path import basename
 from sys import argv
+from copy import copy, deepcopy
 
 import utaupy as up
+from utaupy.hts import Song, Note, Syllable
+from utaupy.label import Label
 import yaml
 from tqdm import tqdm
 
 
-def merge_rest_full(song) -> up.hts.Song:
+def merge_rest_full(song) -> Song:
     """
     フルラベル用
 
@@ -25,7 +28,7 @@ def merge_rest_full(song) -> up.hts.Song:
 
     [sil][m][a][pau][sil][pau][k][a] -> [pau][m][a][pau][k][a] にする
     """
-    new_song = up.hts.Song()
+    new_song = Song()
 
     # silだったら困るのでpauにする。
     first_note = song[0]
@@ -55,7 +58,7 @@ def merge_rest_full(song) -> up.hts.Song:
     return new_song
 
 
-def merge_rests_mono(label: up.label.Label):
+def merge_rests_mono(label: Label):
     """
     モノラベルの休符を結合する。
     休符はすべてpauにする。
@@ -65,7 +68,7 @@ def merge_rests_mono(label: up.label.Label):
         if phoneme.symbol == 'sil':
             phoneme.symbol = 'pau'
 
-    new_label = up.label.Label()
+    new_label = Label()
     prev_phoneme = label[0]
     new_label.append(prev_phoneme)
     for phoneme in label[1:]:
@@ -79,8 +82,57 @@ def merge_rests_mono(label: up.label.Label):
 
     return new_label
 
+def remove_breath_full(song: Song):
+    """
+    ブレス記号を削除して、前の音素(母音)を伸ばす。
+    ノート内音素数とかが変わるので、時刻やノート内位置を再構築する必要がある。
 
-def round_full(song: up.hts.Song, unit: int = 50000):
+    ブレス記号がある場合、
+    音符が「あ」「か」「(ブレス記号)」のとき
+    音節は [[a]] [[k a br]] となり、
+    ノートは [[[a]]] [[[k a br]]] となっている。
+
+    これを [[[a]]] [[[k a]]] とする。
+
+    変更が起きたかどうかをboolで返す。
+    """
+    new_song_data = []
+    # ループが深いので、楽譜中にブレスがあるときだけ処理を実行
+    if 'br' in (ph.identity for ph in song.all_phonemes):
+        # print('\nbrを除去します。')
+        for note in song.all_notes :
+            # ノート内の最後にbrがあるときは時間を調製してからbrを除去
+            if note.phonemes[-1].identity == 'br':
+                new_note = copy(note)
+                new_note[-1][-2].end = copy(new_note[-1][-1].end)
+                del new_note[-1][-1]
+            # brが含まれないとき
+            else:
+                new_note = note
+            # brを除去したSong用のリストにノートを追加
+            new_song_data.append(new_note)
+        # 音節内音素位置やノート内音節数が変わるので再補完
+        song.data = new_song_data
+        song.autofill()
+
+
+def remove_breath_mono(label: Label):
+    """
+    ブレス記号を削除して、前の音素(母音)を伸ばす。
+    """
+    new_data = [label[0]]
+    # 楽譜中にブレスがあるときだけ処理を実行する。
+    if 'br' in (ph.symbol for ph in label):
+        for i, phoneme in enumerate(label[1:], 1):
+            if phoneme.symbol == 'br':
+                label[i-1].end = phoneme.end
+            else:
+                new_data.append(phoneme)
+        label.data = new_data
+
+
+
+def round_full(song: Song, unit: int = 50000):
     """
     フルラベル用のSongオブジェクトの発声時刻を丸める。
     unit: 丸める基準
@@ -90,7 +142,7 @@ def round_full(song: up.hts.Song, unit: int = 50000):
         phoneme.end = round(int(phoneme.end) / unit) * unit
 
 
-def round_mono(label: up.label.Label, unit: int = 50000):
+def round_mono(label: Label, unit: int = 50000):
     """
     モノラベル用のLabelオブジェクトの発声時刻を丸める。
     unit: 丸める基準
@@ -122,7 +174,9 @@ def main(path_config_yaml):
         path_sinsy_mono_out = f'{out_dir}/sinsy_mono_round/{basename(path_sinsy_full_in)}'
         song = up.hts.load(path_sinsy_full_in).song
         # 休符を結合してもとのフルラベルを上書き
-        song = merge_rest_full(song)
+        # song = merge_rest_full(song)
+        # ブレスを除去
+        remove_breath_full(song)
         # Sinsyの時間計算が気に入らないので、時間を計算しなおす
         # 楽譜と合わない発声時刻を知らない楽譜と合わない発声時刻が気に入らないよ
         song.reset_time()
@@ -143,8 +197,11 @@ def main(path_config_yaml):
     for path_mono_in in tqdm(lab_files):
         path_mono_out = f'{out_dir}/mono_label_round/{basename(path_mono_in)}'
         label = up.label.load(path_mono_in)
-        # 休符を結合してもとのモノラベルを上書き
-        label = merge_rests_mono(label)
+        # 休符を結合
+        # label = merge_rests_mono(label)
+        # ブレスを削除して直前の音素を延長
+        remove_breath_mono(label)
+        # ファイル出力
         label.write(path_mono_in)
         # 丸める
         round_mono(label)
@@ -154,7 +211,7 @@ def main(path_config_yaml):
 
 
 if __name__ == '__main__':
-    print('----------------------------------------------------------------------')
-    print('[ Stage 0 ] [ Step 1b ] Merge rests and round times in label files.')
-    print('----------------------------------------------------------------------')
+    print('------------------------------------------------------------------------------')
+    print('[ Stage 0 ] [ Step 1b ] Remove \'br\' phonemes and round times in label files.')
+    print('------------------------------------------------------------------------------')
     main(argv[1])
