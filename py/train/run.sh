@@ -60,7 +60,10 @@ fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
+    #change↓------------------------------------------------------
+    rm -rf data dump
     sh ./data_prep_enunu.sh ./config.yaml
+    #change↑------------------------------------------------------
     mkdir -p data/list
 
     echo "train/dev/eval split"
