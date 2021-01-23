@@ -38,7 +38,7 @@ python $NO2_ROOT/utils/align_lab.py $config_path
 # - Contexts of picth of notes. (e2, e3)
 # - Contexts for Phrases. (g, h, i)
 
-python $ENUNU_ROOT/py/modify_full_label_for_enunu.py $config_path
+python utils/modify_full_label_for_enunu.py $config_path
 
 # Step 3:
 # Perform segmentation.
