@@ -1,2 +1,3 @@
-# nnsvs_kuroppoid_recipe
- 黒昴宿の真似したATSUYAロイド(黒っぽいど) のNNSVS用レシピ
+# nnsvs_recipe_for_enunu/ofuton_p_utagoe_db
+ おふとんP歌声データベースの ENUNU 用レシピ
+ 
