@@ -55,27 +55,6 @@ acoustic:
     subphone_features:    coarse_coding
     relative_f0:          true
     post_filter:          true
-# model config-----------------------------------
-    stream_sizes:
-        - 180
-        - 3
-        - 1
-        - 15
-    has_dynamic_features:
-        - true
-        - true
-        - false
-        - true
-    num_windows:          3
-    stream_weights:       null
-    netG:
-        _target_:         nnsvs.model.Conv1dResnet
-        in_dim:           186
-        out_dim:          199
-        hidden_dim:       128
-        num_layers:       6
-        dropout:          0.1
-# ------------------------------------------------
 
 
 # conf/synthesis/duration/defaults.yaml から移植
@@ -84,25 +63,8 @@ duration:
     question_path:        null
     in_scaler_path:       null
     out_scaler_path:      null
-    # model config-----------------------------------
-    stream_sizes:
-    - 1
-    has_dynamic_features:
-    - false
-    stream_weights:
-    - 1
-    netG:
-        _target_:         nnsvs.model.LSTMRNN
-        in_dim:           182
-        out_dim:          1
-        hidden_dim:       64
-        num_layers:       2
-        bidirectional:    true
-        dropout:          0.5
-    # ------------------------------------------------
 
-
-
+    
 # conf/synthesis/timelag/defaults.yaml から移植
 timelag:
     question_path:        null
@@ -111,18 +73,3 @@ timelag:
     out_scaler_path:      null
     allowed_range:        [-20, 20]  # in frames
     allowed_range_rest:   [-40, 40]
-    # model config-----------------------------------
-    stream_sizes:
-        - 1
-    has_dynamic_features:
-        - false
-    stream_weights:
-        - 1
-    netG:
-        _target_:         nnsvs.model.FeedForwardNet
-        in_dim:           182
-        out_dim:          1
-        hidden_dim:       128
-        num_layers:       2
-        dropout:          0.5
-    # ------------------------------------------------

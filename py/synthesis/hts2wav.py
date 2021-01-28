@@ -138,9 +138,9 @@ def load_qst(question_path, append_hat_for_LL=False) -> tuple:
 
 
 def synthesis(config, device, label_path,
-              timelag_model, timelag_in_scaler, timelag_out_scaler,
-              duration_model, duration_in_scaler, duration_out_scaler,
-              acoustic_model, acoustic_in_scaler, acoustic_out_scaler):
+              timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
+              duration_model, duration_config, duration_in_scaler, duration_out_scaler,
+              acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler):
     """
     音声ファイルを合成する。
     """
@@ -160,7 +160,7 @@ def synthesis(config, device, label_path,
         lag = predict_timelag(
             device, labels,
             timelag_model,
-            config.timelag,
+            timelag_config,
             timelag_in_scaler,
             timelag_out_scaler,
             timelag_binary_dict,
@@ -175,7 +175,7 @@ def synthesis(config, device, label_path,
         durations = predict_duration(
             device, labels,
             duration_model,
-            config.duration,
+            duration_config, 
             duration_in_scaler,
             duration_out_scaler,
             lag,
@@ -192,7 +192,7 @@ def synthesis(config, device, label_path,
     acoustic_features = predict_acoustic(
         device, duration_modified_labels,
         acoustic_model,
-        config.acoustic,
+        acoustic_config,
         acoustic_in_scaler,
         acoustic_out_scaler,
         acoustic_binary_dict,
@@ -207,12 +207,12 @@ def synthesis(config, device, label_path,
         acoustic_features,
         acoustic_binary_dict,
         acoustic_continuous_dict,
-        config.acoustic.stream_sizes,
-        config.acoustic.has_dynamic_features,
+        acoustic_config.stream_sizes,
+        acoustic_config.has_dynamic_features,
         config.acoustic.subphone_features,
         log_f0_conditioning,
         acoustic_pitch_idx,
-        config.acoustic.num_windows,
+        acoustic_config.num_windows,
         config.acoustic.post_filter,
         config.sample_rate,
         config.frame_period,
@@ -242,8 +242,10 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
     maybe_set_normalization_stats_(config)
 
     # モデルに関するファイルを読み取る。
+    model_root = join(config.config_path, config.model_dir)
     # timelag
-    timelag_model = hydra.utils.instantiate(config.timelag.netG).to(device)
+    timelag_config = OmegaConf.load(join(model_root, "timelag", "model.yaml"))
+    timelag_model = hydra.utils.instantiate(timelag_config.netG).to(device)
     checkpoint = torch.load(join(config_path, config.timelag.checkpoint),
                             map_location=lambda storage, loc: storage)
     timelag_model.load_state_dict(checkpoint['state_dict'])
@@ -254,7 +256,8 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
     timelag_model.eval()
 
     # duration
-    duration_model = hydra.utils.instantiate(config.duration.netG).to(device)
+    duration_config = OmegaConf.load(join(model_root, "duration", "model.yaml"))
+    duration_model = hydra.utils.instantiate(duration_config.netG).to(device)
     checkpoint = torch.load(join(config_path, config.duration.checkpoint),
                             map_location=lambda storage, loc: storage)
     duration_model.load_state_dict(checkpoint['state_dict'])
@@ -265,7 +268,8 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
     duration_model.eval()
 
     # acoustic model
-    acoustic_model = hydra.utils.instantiate(config.acoustic.netG).to(device)
+    acoustic_config = OmegaConf.load(join(model_root, "acoustic", "model.yaml"))
+    acoustic_model = hydra.utils.instantiate(acoustic_config.netG).to(device)
     checkpoint = torch.load(join(config_path, config.acoustic.checkpoint),
                             map_location=lambda storage, loc: storage)
     acoustic_model.load_state_dict(checkpoint['state_dict'])
@@ -294,9 +298,9 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
     logger.info('Synthesize the wav file: %s', out_wav_path)
     wav = synthesis(
         config, device, label_path,
-        timelag_model, timelag_in_scaler, timelag_out_scaler,
-        duration_model, duration_in_scaler, duration_out_scaler,
-        acoustic_model, acoustic_in_scaler, acoustic_out_scaler)
+        timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
+        duration_model, duration_config, duration_in_scaler, duration_out_scaler,
+        acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler)
     logger.info('Synthesized the wav file: %s', out_wav_path)
 
     # サンプルレートとビット深度を指定してファイル出力
