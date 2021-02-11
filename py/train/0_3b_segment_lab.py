@@ -8,12 +8,14 @@ from glob import glob
 from os import makedirs
 from os.path import basename, splitext
 from sys import argv
+from typing import List, Union
 
 import utaupy as up
 import yaml
 from tqdm import tqdm
 from utaupy.hts import HTSFullLabel
 from utaupy.label import Label
+
 
 def all_phonemes_are_rest(label) -> bool:
     """
@@ -34,6 +36,7 @@ def all_phonemes_are_rest(label) -> bool:
         return True
     # フルラベルでもモノラベルでもないとき
     raise ValueError("Argument 'label' must be Label object or HTSFullLabel object.")
+
 
 def split_mono_label_short(label: Label) -> list:
     """
@@ -63,8 +66,8 @@ def split_mono_label_long(label: Label) -> list:
 
     new_label.append(label[0])
     for i, current_phoneme in enumerate(label[1:-1]):
-        previous_phoneme = label[i-1]
-        if (previous_phoneme.symbol, current_phoneme.symbol) in [('pau', 'sil'), ('pau', 'pau')] :
+        previous_phoneme = label[i - 1]
+        if (previous_phoneme.symbol, current_phoneme.symbol) in [('pau', 'sil'), ('pau', 'pau')]:
             new_label = Label()
             result.append(new_label)
         new_label.append(current_phoneme)
@@ -109,7 +112,8 @@ def split_full_label_long(full_label: HTSFullLabel) -> list:
     result = [new_label]
 
     for oneline in full_label[1:-1]:
-        if (oneline.previous_phoneme.identity, oneline.phoneme.identity) in [('pau', 'sil'), ('pau', 'pau')]:
+        if ((oneline.previous_phoneme.identity, oneline.phoneme.identity)
+                in [('pau', 'sil'), ('pau', 'pau')]):
             print(oneline.previous_phoneme.identity, oneline.phoneme.identity)
             new_label = HTSFullLabel()
             result.append(new_label)
@@ -124,7 +128,28 @@ def split_full_label_long(full_label: HTSFullLabel) -> list:
     return result
 
 
-def main(path_config_yaml):
+def split_label(label: Union[Label, HTSFullLabel], mode: str) -> List[Union[Label, HTSFullLabel]]:
+    """
+    ラベルを分割してリストにして返す。フルラベルとモノラベルを自動で使い分ける。
+    mode: 'short' か 'long' のいずれか
+    """
+    if mode not in ('short', 'long'):
+        raise ValueError('Argument "mode" must be "short" or "long".')
+
+    if isinstance(label, Label):
+        if mode == 'short':
+            result = split_mono_label_short(label)
+        elif mode == 'long':
+            result = split_mono_label_long(label)
+    elif isinstance(label, HTSFullLabel):
+        if mode == 'short':
+            result = split_full_label_short(label)
+        elif mode == 'long':
+            result = split_full_label_long(label)
+    return result
+
+
+def main(path_config_yaml, mode='short'):
     """
     ラベルファイルを取得して分割する。
     """
@@ -145,8 +170,8 @@ def main(path_config_yaml):
     print('Segmenting sinsy_full_round label files')
     for path in tqdm(sinsy_full_round_files):
         songname = splitext(basename(path))[0]
-        full_label = up.hts.load(path)
-        label_segments = split_full_label_long(full_label)
+        label = up.hts.load(path)
+        label_segments = split_label(label, mode)
         for idx, segment in enumerate(label_segments):
             segment.write(f'{out_dir}/sinsy_full_round_seg/{songname}_seg{idx}.lab',
                           strict_sinsy_style=False)
@@ -154,8 +179,8 @@ def main(path_config_yaml):
     print('Segmenting full_dtw label files')
     for path in tqdm(full_dtw_files):
         songname = splitext(basename(path))[0]
-        full_label = up.hts.load(path)
-        label_segments = split_full_label_long(full_label)
+        label = up.hts.load(path)
+        label_segments = split_label(label, mode)
         for idx, segment in enumerate(label_segments):
             segment.write(f'{out_dir}/full_dtw_seg/{songname}_seg{idx}.lab',
                           strict_sinsy_style=False)
@@ -163,8 +188,8 @@ def main(path_config_yaml):
     print('Segmenting sinsy_mono_round label files')
     for path in tqdm(sinsy_mono_round_files):
         songname = splitext(basename(path))[0]
-        mono_label = up.label.load(path)
-        label_segments = split_mono_label_long(mono_label)
+        label = up.label.load(path)
+        label_segments = split_label(label, mode)
         for idx, segment in enumerate(label_segments):
             segment.write(f'{out_dir}/sinsy_mono_round_seg/{songname}_seg{idx}.lab')
 
@@ -172,8 +197,8 @@ def main(path_config_yaml):
     # NOTE: ここだけ出力フォルダ名が 入力フォルダ名_seg ではないので注意
     for path in tqdm(mono_dtw_files):
         songname = splitext(basename(path))[0]
-        mono_label = up.label.load(path)
-        label_segments = split_mono_label_long(mono_label)
+        label = up.label.load(path)
+        label_segments = split_label(label, mode)
         for idx, segment in enumerate(label_segments):
             segment.write(f'{out_dir}/mono_label_round_seg/{songname}_seg{idx}.lab')
 
@@ -183,7 +208,8 @@ def test_full():
     単独のフルラベルを休符で分割する。
     """
     path_in = input('path_in: ')
-    split_result = split_full_label_long(up.hts.load(path_in))
+    label = up.hts.load(path_in)
+    split_result = split_label(label, mode='short')
     for i, full_label in enumerate(split_result):
         path_out = path_in.replace('.lab', f'_split_{str(i).zfill(6)}.lab')
         full_label.write(path_out, strict_sinsy_style=False)
