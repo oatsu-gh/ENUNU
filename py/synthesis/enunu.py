@@ -11,18 +11,17 @@
 """
 
 from datetime import datetime
-from os import chdir, getcwd, makedirs, remove
-from os.path import abspath, dirname, exists, relpath, splitdrive, splitext
+from os import chdir, getcwd, makedirs
+from os.path import relpath, splitdrive, splitext
+# from os.path import abspath, dirname, exists
 from subprocess import Popen
 from sys import argv
 
 import utaupy as up
 from hydra.experimental import compose, initialize
+from utaupy.utils import hts2json, ustobj2songobj
 
-from bat2ust import bat2ust
-from hts2json import hts2json
 from hts2wav import hts2wav
-from ust2hts import convert_ustobj_to_songobj, ust2hts
 
 
 def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
@@ -60,7 +59,7 @@ def utauplugin2hts(path_plugin, path_hts, path_table, strict_sinsy_style=False):
         plugin.notes.append(plugin.next_note)
 
     # Ust → HTSFullLabel
-    song = convert_ustobj_to_songobj(plugin, table)
+    song = ustobj2songobj(plugin, table)
     full_label = up.hts.HTSFullLabel()
     full_label.song = song
     full_label.fill_contexts_from_songobj()
@@ -89,7 +88,7 @@ def utauplugin2hts(path_plugin, path_hts, path_table, strict_sinsy_style=False):
 
     # ファイル出力
     s = '\n'.join(list(map(str, full_label)))
-    with open(path_hts, mode = 'w',encoding='utf-8') as f:
+    with open(path_hts, mode='w', encoding='utf-8') as f:
         f.write(s)
 
 
@@ -141,68 +140,60 @@ def main_as_plugin(path_plugin: str) -> str:
     return path_wav
 
 
-def main_as_engine(path_tempbat: str) -> str:
-    """
-    UtauPluginオブジェクトから音声ファイルを作る
-    """
-    # temp.bat から ustファイルを生成する。
-    print(f'{datetime.now()} : converting BAT to UST')
-    temp_dir = dirname(abspath(path_tempbat))
-    path_ust = f'{temp_dir}/temp_enunu.ust'
-    path_lab = f'{temp_dir}/temp_enunu.lab'
-    path_json = f'{temp_dir}/temp_enunu.json'
-    bat2ust(path_tempbat, path_ust)
-
-    # 生成したustファイルから情報を取得して捨てる
-    print(f'{datetime.now()} : reading setting in ust')
-    ust = up.ust.load(path_ust)
-    voice_dir = ust.setting['VoiceDir']
-    path_wav = abspath(ust.setting['OutFile'])
-    del ust
-
-    # 使用するモデルの設定を取得する
-    print(f'{datetime.now()} : reading enuconfig')
-    enuconfig_name = 'enuconfig'
-    print(getcwd())
-    # ドライブが違うとrelpathが使えないので、カレントディレクトリを変更する
-    print(f'changed cwd :  {getcwd()} -> {voice_dir}')
-    chdir(voice_dir)
-
-    print(getcwd())
-    # configファイルを読み取る
-    print('voice_dir:', voice_dir)
-    print(exists(voice_dir))
-    print('voice_dir(rel):', relpath(voice_dir))
-    print(exists(relpath(voice_dir)))
-    initialize(config_path=relpath(voice_dir, getcwd()))
-    cfg = compose(config_name=enuconfig_name, overrides=[f'+config_path="{relpath(voice_dir)}"'])
-
-    # 変換の設定
-    path_table = f'{voice_dir}/{cfg.table_path}'
-    strict_sinsy_style = not cfg.trained_for_enunu
-    # ファイル処理
-    print(f'{datetime.now()} : converting UST to LAB')
-    ust2hts(path_ust, path_lab, path_table, strict_sinsy_style=strict_sinsy_style)
-    print(f'{datetime.now()} : converting LAB to JSON')
-    hts2json(path_lab, path_json)
-    print(f'{datetime.now()} : converting LAB to WAV')
-    hts2wav(cfg, path_lab, path_wav)
-    print(f'{datetime.now()} : generated WAV ({path_wav})')
-
-    # 一時ファイルを消す
-    remove(path_ust)
-    remove(path_lab)
-    remove(path_json)
-
-    return path_wav
-
-
-def main_as_standalone(path):
-    """
-    スタンドアロンソフトとしての動作
-    """
-    print('未実装です。')
-    print(path)
+# def main_as_engine(path_tempbat: str) -> str:
+#     """
+#     UtauPluginオブジェクトから音声ファイルを作る
+#     """
+#     # temp.bat から ustファイルを生成する。
+#     print(f'{datetime.now()} : converting BAT to UST')
+#     temp_dir = dirname(abspath(path_tempbat))
+#     path_ust = f'{temp_dir}/temp_enunu.ust'
+#     path_lab = f'{temp_dir}/temp_enunu.lab'
+#     path_json = f'{temp_dir}/temp_enunu.json'
+#     bat2ust(path_tempbat, path_ust)
+#
+#     # 生成したustファイルから情報を取得して捨てる
+#     print(f'{datetime.now()} : reading setting in ust')
+#     ust = up.ust.load(path_ust)
+#     voice_dir = ust.setting['VoiceDir']
+#     path_wav = abspath(ust.setting['OutFile'])
+#     del ust
+#
+#     # 使用するモデルの設定を取得する
+#     print(f'{datetime.now()} : reading enuconfig')
+#     enuconfig_name = 'enuconfig'
+#     print(getcwd())
+#     # ドライブが違うとrelpathが使えないので、カレントディレクトリを変更する
+#     print(f'changed cwd :  {getcwd()} -> {voice_dir}')
+#     chdir(voice_dir)
+#
+#     print(getcwd())
+#     # configファイルを読み取る
+#     print('voice_dir:', voice_dir)
+#     print(exists(voice_dir))
+#     print('voice_dir(rel):', relpath(voice_dir))
+#     print(exists(relpath(voice_dir)))
+#     initialize(config_path=relpath(voice_dir, getcwd()))
+#     cfg = compose(config_name=enuconfig_name, overrides=[f'+config_path="{relpath(voice_dir)}"'])
+#
+#     # 変換の設定
+#     path_table = f'{voice_dir}/{cfg.table_path}'
+#     strict_sinsy_style = not cfg.trained_for_enunu
+#     # ファイル処理
+#     print(f'{datetime.now()} : converting UST to LAB')
+#     ust2hts(path_ust, path_lab, path_table, strict_sinsy_style=strict_sinsy_style)
+#     print(f'{datetime.now()} : converting LAB to JSON')
+#     hts2json(path_lab, path_json)
+#     print(f'{datetime.now()} : converting LAB to WAV')
+#     hts2wav(cfg, path_lab, path_wav)
+#     print(f'{datetime.now()} : generated WAV ({path_wav})')
+#
+#     # 一時ファイルを消す
+#     remove(path_ust)
+#     remove(path_lab)
+#     remove(path_json)
+#
+#     return path_wav
 
 
 def main(path: str):
@@ -210,13 +201,12 @@ def main(path: str):
     入力ファイルによって処理を分岐する。
     """
     if path.endswith('.bat'):
-        main_as_engine(path)
+        # main_as_engine(path)
+        print('未実装です。')
     elif path.endswith('.tmp'):
         main_as_plugin(path)
-    elif path.endswith('.ust'):
-        main_as_standalone(path)
     else:
-        raise ValueError('Input file must be BAT(engine), TMP(plugin) or UST(standalone).')
+        raise ValueError('Input file must be BAT(engine) or TMP(plugin).')
 
 
 if __name__ == '__main__':
@@ -226,7 +216,7 @@ if __name__ == '__main__':
         main(argv[1])
     elif len(argv) == 1:
         path_utauplugin = input(
-            'input file path of BAT(engine), TMP(plugin) or UST(standalone)\n>>> '
+            'Input file path of BAT(engine) or TMP(plugin)\n>>> '
         ).strip('"')
 
         main(path_utauplugin)
