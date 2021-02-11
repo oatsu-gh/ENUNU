@@ -24,7 +24,7 @@ python $script_dir/0_1a_gen_lab.py $config_path
 # このとき、休符周辺のコンテキストがutaupyの仕様に調整される。
 # また、フルラベルをもとにモノラベルも生成して保存する。(丸めたもののみ保存)
 # sinsy_full_round, sinsy_mono_round, mono_label_round の3フォルダにファイルが保存される。
-python $script_dir/0_1b_remove_br_and_round.py $config_path
+python $script_dir/0_1b_merge_rest_and_round_lab.py $config_path
 
 # Step 2:
 # Sinsyの出力するラベルファイル(sinsy_mono_round)と、
