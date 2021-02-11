@@ -42,7 +42,7 @@ def xml2lab(path_xml_in, path_full_out, path_mono_out, sinsy_dic_dir):
         f.write(str(full_label))
 
     # モノラベルをやる。
-    is_mono = False
+    is_mono = True
     # モノラベルとしてSinsyからデータを受け取る
     labels = sinsy.createLabelData(is_mono, 1, 1).getData()
     # モノラベルを入出力するためのオブジェクトを用意する。
