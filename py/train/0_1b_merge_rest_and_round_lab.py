@@ -10,16 +10,16 @@ from glob import glob
 from os import makedirs
 from os.path import basename
 from sys import argv
-from copy import copy, deepcopy
+from copy import copy
 
 import utaupy as up
-from utaupy.hts import Song, Note, Syllable
+from utaupy.hts import Song
 from utaupy.label import Label
 import yaml
 from tqdm import tqdm
 
 
-def merge_rest_full(song) -> Song:
+def merge_rest_full(song:Song) -> Song:
     """
     フルラベル用
 
@@ -35,6 +35,7 @@ def merge_rest_full(song) -> Song:
     if first_note.phonemes[0].identity == 'sil':
         first_note.phonemes[0].identity = 'pau'
     new_song.append(first_note)
+    print(len(song), end=' ')
 
     prev_note = first_note
     for note in song[1:]:
@@ -54,6 +55,7 @@ def merge_rest_full(song) -> Song:
             prev_note = note
     # データを補完
     new_song.autofill()
+    print(len(song))
 
     return new_song
 
@@ -79,6 +81,7 @@ def merge_rests_mono(label: Label):
             prev_phoneme = phoneme
     # 発声終了時刻を再計算(わずかにずれる可能性があるため)
     new_label.reload()
+    print(len(label))
 
     return new_label
 
@@ -174,9 +177,9 @@ def main(path_config_yaml):
         path_sinsy_mono_out = f'{out_dir}/sinsy_mono_round/{basename(path_sinsy_full_in)}'
         song = up.hts.load(path_sinsy_full_in).song
         # 休符を結合してもとのフルラベルを上書き
-        # song = merge_rest_full(song)
+        song = merge_rest_full(song)
         # ブレスを除去
-        remove_breath_full(song)
+        # remove_breath_full(song)
         # Sinsyの時間計算が気に入らないので、時間を計算しなおす
         # 楽譜と合わない発声時刻を知らない楽譜と合わない発声時刻が気に入らないよ
         song.reset_time()
@@ -198,9 +201,9 @@ def main(path_config_yaml):
         path_mono_out = f'{out_dir}/mono_label_round/{basename(path_mono_in)}'
         label = up.label.load(path_mono_in)
         # 休符を結合
-        # label = merge_rests_mono(label)
+        label = merge_rests_mono(label)
         # ブレスを削除して直前の音素を延長
-        remove_breath_mono(label)
+        # remove_breath_mono(label)
         # ファイル出力
         label.write(path_mono_in)
         # 丸める
@@ -212,6 +215,6 @@ def main(path_config_yaml):
 
 if __name__ == '__main__':
     print('------------------------------------------------------------------------------')
-    print('[ Stage 0 ] [ Step 1b ] Remove \'br\' phonemes and round times in label files.')
+    print('[ Stage 0 ] [ Step 1b ] Merge rests and round times in label files.')
     print('------------------------------------------------------------------------------')
     main(argv[1])
