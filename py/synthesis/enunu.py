@@ -119,7 +119,7 @@ def main_as_plugin(path_plugin: str) -> str:
     # 入出力パスを設定する
     path_lab = f'{cache_dir}/temp.lab'
     path_json = path_lab.replace('.lab', '.json')
-    path_wav = f'{splitext(path_ust)[0]}__{str_now}.wav'.replace(' ', '_')
+    path_wav = f'{splitext(path_ust)[0]}__{str_now}.wav'.replace(' ', '_').replace('　', '_')
     # 変換テーブル(歌詞→音素)のパス
     path_table = f'{voice_dir}/{cfg.table_path}'
 
