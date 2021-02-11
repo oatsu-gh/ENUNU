@@ -70,11 +70,11 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     find data/acoustic/ -type f -name "*.wav" -exec basename {} .wav \; \
         | sort > data/list/utt_list.txt
     #change↓-----------------------------------------------------------
-    grep tetsudou_shouka_ data/list/utt_list.txt > data/list/$eval_set.list
+    grep haruga_kita data/list/utt_list.txt > data/list/$eval_set.list
     #change↑-----------------------------------------------------------
     grep kagome_kagome_ data/list/utt_list.txt > data/list/$dev_set.list
     #change↓-----------------------------------------------------------
-    grep -v tetsudou_shouka_ data/list/utt_list.txt | grep -v kagome_kagome_ > data/list/$train_set.list
+    grep -v haruga_kita data/list/utt_list.txt | grep -v kagome_kagome_ > data/list/$train_set.list
     #change↑-----------------------------------------------------------
 fi
 
