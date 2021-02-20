@@ -9,7 +9,6 @@
   - キャッシュフォルダでいいと思う。
 3. LABファイル→WAVファイル
 """
-
 from datetime import datetime
 from os import chdir, getcwd, makedirs
 from os.path import relpath, splitdrive, splitext
@@ -18,10 +17,10 @@ from subprocess import Popen
 from sys import argv
 
 import utaupy as up
-from hydra.experimental import compose, initialize
-from utaupy.utils import hts2json, ustobj2songobj
-
 from hts2wav import hts2wav
+from hydra.experimental import compose, initialize
+from shlex import quote
+from utaupy.utils import hts2json, ustobj2songobj
 
 
 def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
@@ -119,7 +118,7 @@ def main_as_plugin(path_plugin: str) -> str:
     # 入出力パスを設定する
     path_lab = f'{cache_dir}/temp.lab'
     path_json = path_lab.replace('.lab', '.json')
-    path_wav = f'{splitext(path_ust)[0]}__{str_now}.wav'.replace(' ', '_').replace('　', '_')
+    path_wav = f'{splitext(path_ust)[0]}__{str_now}.wav'
     # 変換テーブル(歌詞→音素)のパス
     path_table = f'{voice_dir}/{cfg.table_path}'
 
@@ -136,7 +135,7 @@ def main_as_plugin(path_plugin: str) -> str:
     hts2wav(cfg, path_lab, path_wav)
     print(f'{datetime.now()} : generated WAV ({path_wav})')
     # input('Press Enter.')
-    Popen(['start', path_wav], shell=True)
+    Popen(['start', quote(path_wav)], shell=True)
     return path_wav
 
 
