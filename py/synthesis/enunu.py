@@ -9,6 +9,8 @@
   - キャッシュフォルダでいいと思う。
 3. LABファイル→WAVファイル
 """
+import platform
+import winsound
 from datetime import datetime
 from os import chdir, getcwd, makedirs
 from os.path import relpath, splitdrive, splitext
@@ -17,9 +19,10 @@ from subprocess import Popen
 from sys import argv
 
 import utaupy as up
-from utaupy.utils import hts2json, ustobj2songobj
-from hydra.experimental import compose, initialize
 from hts2wav import hts2wav
+from hydra.experimental import compose, initialize
+from utaupy.utils import hts2json, ustobj2songobj
+
 # from shlex import quote
 
 
@@ -135,7 +138,10 @@ def main_as_plugin(path_plugin: str) -> str:
     hts2wav(cfg, path_lab, path_wav)
     print(f'{datetime.now()} : generated WAV ({path_wav})')
     # input('Press Enter.')
-    Popen(['start', path_wav], shell=True)
+    # Popen(['start', path_wav], shell=True)
+    # Windowsの時は音声を再生する。
+    if platform.system() == 'Windows':
+        winsound.PlaySound(path_wav, winsound.SND_FILENAME)
     return path_wav
 
 
@@ -209,7 +215,7 @@ def main(path: str):
 
 
 if __name__ == '__main__':
-    print('_____ξ ・ヮ・)ξ < ENUNU v0.1.0 ________')
+    print('_____ξ ・ヮ・)ξ < ENUNU v0.1.1 ________')
     print(f'argv: {argv}')
     if len(argv) == 2:
         main(argv[1])

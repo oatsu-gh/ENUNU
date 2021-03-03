@@ -1,6 +1,6 @@
 hydra-core
 joblib
-nnnkwii
+nnmnkwii
 nnsvs
 numpy != 1.19.4
 omegaconf
