@@ -4,6 +4,10 @@ NNSVS用歌声モデルをUTAU音源みたいに使えるようにするUTAUプ�
 
 UTAU plugin powered by NNSVS
 
+## インストールと使い方の記事
+
+[UTAUでNNSVSモデルを使おう！（ENUNU）](https://note.com/crazy_utau/n/n45db22b33d2c)
+
 ## 使い方
 
 1. USTを開き、ENUNU用モデルを含むUTAU音源を原音ファイルセットに設定する。
