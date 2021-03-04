@@ -106,17 +106,12 @@ def main_as_plugin(path_plugin: str) -> str:
     del plugin
 
     print(f'{datetime.now()} : reading enuconfig')
-    # 使用するモデルの設定
-    enuconfig_name = 'enuconfig'
-    # ドライブが違うとrelpathが使えないので、カレントディレクトリを変更する
-    cwd = getcwd()
-    if splitdrive(voice_dir)[0] != splitdrive(cwd)[0]:
-        print(f'changed cwd :  {getcwd()} -> {voice_dir}')
-        chdir(voice_dir)
+    # カレントディレクトリを音源フォルダに変更する
+    chdir(voice_dir)
 
     # configファイルを読み取る
     initialize(config_path=relpath(voice_dir))
-    cfg = compose(config_name=enuconfig_name, overrides=[f'+config_path="{relpath(voice_dir)}"'])
+    cfg = compose(config_name='enuconfig', overrides=[f'+config_path="{relpath(voice_dir)}"'])
 
     # 入出力パスを設定する
     path_lab = f'{cache_dir}/temp.lab'
