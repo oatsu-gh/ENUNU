@@ -38,7 +38,6 @@
 
 """
 NNSVSを利用して、ラベルから音声ファイルを生成する。
-
 nnsvs-synthesis コマンドの源である nnsvs.bin.synthesis.py をENUNU用に改変した。
 """
 
@@ -101,7 +100,7 @@ def generate_wav_file(config: DictConfig, wav, out_wav_path, logger):
         wav = wav.astype(np.int32)
     else:
         logger.warn(
-            'sample_rate can take \'16\' or \'32\'. This time render in 32bit int depth.')
+            "sample_rate can take '16' or '32'. This time render in 32bit int depth.")
         if config.gain_normalize:
             wav = 2147483647 * wav / np.max(np.abs(wav))
         else:
@@ -175,7 +174,7 @@ def synthesis(config, device, label_path,
         durations = predict_duration(
             device, labels,
             duration_model,
-            duration_config, 
+            duration_config,
             duration_in_scaler,
             duration_out_scaler,
             lag,
@@ -327,7 +326,7 @@ def main():
     # コマンドライン引数が不足していれば標準入力で受ける
     else:
         voicebank_config_yaml_path = \
-            input('Please input voicebank\'s config file path\n>>> ').strip('"')
+            input("Please input voicebank's config file path\n>>> ").strip('"')
         label_path = \
             input('Please input label file path\n>>> ').strip('"')
         out_wav_path = f'{splitext(label_path)[0]}.wav'
