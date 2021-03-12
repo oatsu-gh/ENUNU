@@ -20,7 +20,8 @@ from sys import argv
 
 import utaupy as up
 from hts2wav import hts2wav
-from hydra.experimental import compose, initialize
+from omegaconf import DictConfig, OmegaConf
+# from hydra.experimental import compose, initialize
 from utaupy.utils import hts2json, ustobj2songobj
 
 # from shlex import quote
@@ -74,7 +75,7 @@ def utauplugin2hts(path_plugin, path_hts, path_table, strict_sinsy_style=False):
     #          path_hts.replace('.lab', '途中.json'))
 
     # [#PREV] と [#NEXT] を消す前の状態での休符周辺のコンテキストを調整する
-    if any((prev_exists, next_exists)):
+    if prev_exists or next_exists:
         full_label = up.hts.adjust_pau_contexts(full_label, strict=strict_sinsy_style)
 
     # [#PREV] のノート(の情報がある行)を削る
@@ -105,20 +106,16 @@ def main_as_plugin(path_plugin: str) -> str:
     path_ust, voice_dir, cache_dir = get_project_path(plugin)
     del plugin
 
-    print(f'{datetime.now()} : reading enuconfig')
     # カレントディレクトリを音源フォルダに変更する
     chdir(voice_dir)
-
     # configファイルを読み取る
-    initialize(config_path=relpath(voice_dir))
-    cfg = compose(config_name='enuconfig', overrides=[f'+config_path="{relpath(voice_dir)}"'])
+    print(f'{datetime.now()} : reading enuconfig')
+    cfg = DictConfig(OmegaConf.load(f'{voice_dir}/enuconfig.yaml'))
 
     # 入出力パスを設定する
     path_lab = f'{cache_dir}/temp.lab'
-    path_json = path_lab.replace('.lab', '.json')
+    path_json = f'{cache_dir}/temp.json'
     path_wav = f'{splitext(path_ust)[0]}__{str_now}.wav'
-    # 変換テーブル(歌詞→音素)のパス
-    path_table = f'{voice_dir}/{cfg.table_path}'
 
     # キャッシュフォルダがなければつくる
     makedirs(cache_dir, exist_ok=True)
@@ -126,14 +123,12 @@ def main_as_plugin(path_plugin: str) -> str:
     # ファイル処理
     strict_sinsy_style = not cfg.trained_for_enunu
     print(f'{datetime.now()} : converting TMP to LAB')
-    utauplugin2hts(path_plugin, path_lab, path_table, strict_sinsy_style=strict_sinsy_style)
+    utauplugin2hts(path_plugin, path_lab, cfg.path_table, strict_sinsy_style=strict_sinsy_style)
     print(f'{datetime.now()} : converting LAB to JSON')
     hts2json(path_lab, path_json)
     print(f'{datetime.now()} : converting LAB to WAV')
     hts2wav(cfg, path_lab, path_wav)
     print(f'{datetime.now()} : generated WAV ({path_wav})')
-    # input('Press Enter.')
-    # Popen(['start', path_wav], shell=True)
     # Windowsの時は音声を再生する。
     if platform.system() == 'Windows':
         winsound.PlaySound(path_wav, winsound.SND_FILENAME)
