@@ -189,7 +189,7 @@ def main(path_config_yaml):
         # 丸めたフルラベルを出力
         song.write(path_sinsy_full_out, strict_sinsy_style=False, label_type='full')
         # 丸めたモノラベルを出力
-        song.write(path_sinsy_mono_out, strict_sinsy_style=False, label_type='mono')
+        song.as_mono().write(path_sinsy_mono_out)
 
     # Sinsyで出力したモノラベルを処理する。
     # NOTE: フルラベルのときに同時に処理するので不要
