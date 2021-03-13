@@ -205,7 +205,7 @@ def main(path: str):
 
 
 if __name__ == '__main__':
-    print('_____ξ ・ヮ・)ξ < ENUNU v0.1.1 ________')
+    print('_____ξ ・ヮ・)ξ < ENUNU v0.x.x ________')
     print(f'argv: {argv}')
     if len(argv) == 2:
         main(argv[1])
