@@ -85,27 +85,50 @@ def maybe_set_normalization_stats_(config):
 
 def generate_wav_file(config: DictConfig, wav, out_wav_path, logger):
     """
-    ビット深度を指定
+    ビット深度を指定してファイル出力
     """
-    # 音量ノーマライズ
-    if str(config.bit_depth) == '16':
-        wav = wav.astype(np.int16)
-        if config.gain_normalize:
-            wav = 32767 * wav / np.max(np.abs(wav))
-    elif str(config.bit_depth) == '32':
-        if config.gain_normalize:
-            wav = 2147483647 * wav / np.max(np.abs(wav))
-        else:
-            wav = 65536 * wav
-        wav = wav.astype(np.int32)
+    max_gain = np.max(np.abs(wav))
+
+    # 学習データのビット震度を推定(8388608=2^24)
+    if max_gain > 8388608:
+        training_data_bit_depth = 32
     else:
-        logger.warn(
-            "sample_rate can take '16' or '32'. This time render in 32bit int depth.")
-        if config.gain_normalize:
-            wav = 2147483647 * wav / np.max(np.abs(wav))
-        else:
-            wav = 65536 * wav
+        training_data_bit_depth = 16
+
+    # 出力ファイルのビット震度を指定
+    bit_depth = int(config.bit_depth)
+    if bit_depth not in (16, 32):
+        logger.warn("bit_depth can take '16' or '32'. This time render in 32bit int depth.")
+
+    # 16bit出力のとき
+    if bit_depth == 16:
+        limit_gain = 32767
+        # 16bitの音声を学習したと思われるときはそのまま出力
+        # 32bitで学習して16bit出力しようとしている場合は16bit小さくする。
+        if training_data_bit_depth == 32:
+            wav = wav / 65536
+        wav = wav.astype(np.int16)
+    # 32bit出力のとき
+    elif bit_depth == 32:
+        limit_gain = 2147483647
+        # 32bitの音声を学習したと思われるときはそのまま出力
+        # 16bitで学習して32bit出力しようとしている場合は16bit大きくする。
+        if training_data_bit_depth == 16:
+            wav = wav * 65536
         wav = wav.astype(np.int32)
+    # なぜか16bitでも32bitでもないとき
+    else:
+        raise ValueError('Unexpected Error')
+
+    # 音量ノーマライズする場合
+    if config.gain_normalize:
+        wav = wav * limit_gain / max_gain
+    # 音量ノーマライズしない場合、クリッピングしてたら警告
+    else:
+        if max_gain > limit_gain:
+            logger.warn("Output WAV file seems clipped")
+
+    # ファイル出力
     wavfile.write(out_wav_path, rate=config.sample_rate, data=wav)
 
 
