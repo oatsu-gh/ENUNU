@@ -50,7 +50,6 @@ import joblib
 import numpy as np
 import torch
 from hydra.experimental import compose, initialize
-# from hydra.utils import to_absolute_path
 from nnmnkwii.io import hts
 from nnsvs.gen import (gen_waveform, postprocess_duration, predict_acoustic,
                        predict_duration, predict_timelag)
@@ -59,7 +58,7 @@ from omegaconf import DictConfig, OmegaConf
 from scipy.io import wavfile
 
 
-def maybe_set_checkpoints_(config):
+def maybe_set_checkpoints_(config: DictConfig):
     """
     configファイルを参考に、使用するチェックポイントを設定する。
     """
@@ -67,16 +66,16 @@ def maybe_set_checkpoints_(config):
     for typ in ('timelag', 'duration', 'acoustic'):
         # checkpoint of each model
         if config[typ].checkpoint is None:
-            config[typ].checkpoint = 'best_loss.pth'
-        config[typ].checkpoint = join(model_dir, typ, config[typ].checkpoint)
+            config[typ].checkpoint = join(model_dir, typ, 'best_loss.pth')
+        else:
+            config[typ].checkpoint = join(model_dir, typ, config[typ].checkpoint)
 
 
-def maybe_set_normalization_stats_(config):
+def maybe_set_normalization_stats_(config: DictConfig):
     """
     configファイルを参考に、使用する *_scaler.joblib ファイルを設定する。
     """
     stats_dir = config.stats_dir
-
     for typ in ('timelag', 'duration', 'acoustic'):
         # I/O path of scalar file for each model
         config[typ].in_scaler_path = join(stats_dir, f'in_{typ}_scaler.joblib')
@@ -132,19 +131,16 @@ def generate_wav_file(config: DictConfig, wav, out_wav_path, logger):
     wavfile.write(out_wav_path, rate=config.sample_rate, data=wav)
 
 
-def set_each_question_path(config):
+def set_each_question_path(config: DictConfig):
     """
     qstを読み取るのめんどくさい
     """
-    config_path = config.config_path
     # hedファイルを全体で指定しているか、各モデルで設定しているかを判定する
     for typ in ('timelag', 'duration', 'acoustic'):
         if config[typ].question_path is None:
-            config[typ].question_path = join(
-                config_path, config.question_path)
+            config[typ].question_path = config.question_path
         else:
-            config[typ].question_path = join(
-                config_path, config[typ].question_path)
+            config[typ].question_path = config[typ].question_path
 
 
 def load_qst(question_path, append_hat_for_LL=False) -> tuple:
@@ -252,7 +248,6 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
         - utt_list を使わず単一ファイルのみにした。
         - 単一ファイルのときの音量ノーマライズを無効にした。
     """
-    config_path = config.config_path
     logger = getLogger(config.verbose)
     logger.info(OmegaConf.to_yaml(config))
 
@@ -264,41 +259,38 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
     maybe_set_normalization_stats_(config)
 
     # モデルに関するファイルを読み取る。
-    model_root = join(config.config_path, config.model_dir)
+    model_root = config.model_dir
     # timelag
     timelag_config = OmegaConf.load(join(model_root, "timelag", "model.yaml"))
     timelag_model = hydra.utils.instantiate(timelag_config.netG).to(device)
-    checkpoint = torch.load(join(config_path, config.timelag.checkpoint),
-                            map_location=lambda storage, loc: storage)
+    checkpoint = torch.load(config.timelag.checkpoint,
+                            map_location=lambda storage,
+                            loc: storage)
     timelag_model.load_state_dict(checkpoint['state_dict'])
-    timelag_in_scaler = joblib.load(join(
-        config_path, config.timelag.in_scaler_path))
-    timelag_out_scaler = joblib.load(join(
-        config_path, config.timelag.out_scaler_path))
+    timelag_in_scaler = joblib.load(config.timelag.in_scaler_path)
+    timelag_out_scaler = joblib.load(config.timelag.out_scaler_path)
     timelag_model.eval()
 
     # duration
     duration_config = OmegaConf.load(join(model_root, "duration", "model.yaml"))
     duration_model = hydra.utils.instantiate(duration_config.netG).to(device)
-    checkpoint = torch.load(join(config_path, config.duration.checkpoint),
-                            map_location=lambda storage, loc: storage)
+    checkpoint = torch.load(config.duration.checkpoint,
+                            map_location=lambda storage,
+                            loc: storage)
     duration_model.load_state_dict(checkpoint['state_dict'])
-    duration_in_scaler = joblib.load(join(
-        config_path, config.duration.in_scaler_path))
-    duration_out_scaler = joblib.load(join(
-        config_path, config.duration.out_scaler_path))
+    duration_in_scaler = joblib.load(config.duration.in_scaler_path)
+    duration_out_scaler = joblib.load(config.duration.out_scaler_path)
     duration_model.eval()
 
     # acoustic model
     acoustic_config = OmegaConf.load(join(model_root, "acoustic", "model.yaml"))
     acoustic_model = hydra.utils.instantiate(acoustic_config.netG).to(device)
-    checkpoint = torch.load(join(config_path, config.acoustic.checkpoint),
-                            map_location=lambda storage, loc: storage)
+    checkpoint = torch.load(config.acoustic.checkpoint,
+                            map_location=lambda storage,
+                            loc: storage)
     acoustic_model.load_state_dict(checkpoint['state_dict'])
-    acoustic_in_scaler = joblib.load(join(
-        config_path, config.acoustic.in_scaler_path))
-    acoustic_out_scaler = joblib.load(join(
-        config_path, config.acoustic.out_scaler_path))
+    acoustic_in_scaler = joblib.load(config.acoustic.in_scaler_path)
+    acoustic_out_scaler = joblib.load(config.acoustic.out_scaler_path)
     acoustic_model.eval()
 
     # 設定を表示
@@ -307,16 +299,16 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
     # 入力するラベルファイルを指定。
     if label_path is None:
         assert config.label_path is not None
-        label_path = join(config_path, config.label_path)
+        label_path = config.label_path
     else:
-        label_path = join(config_path, label_path)
+        pass
     logger.info('Process the label file: %s', label_path)
 
     # 出力するwavファイルの設定。
     if out_wav_path is None:
-        out_wav_path = join(config_path, config.out_wav_path)
+        out_wav_path = config.out_wav_path
     else:
-        out_wav_path = join(config_path, out_wav_path)
+        pass
     logger.info('Synthesize the wav file: %s', out_wav_path)
     wav = synthesis(
         config, device, label_path,
