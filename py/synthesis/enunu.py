@@ -123,7 +123,7 @@ def main_as_plugin(path_plugin: str) -> str:
     # ファイル処理
     strict_sinsy_style = not cfg.trained_for_enunu
     print(f'{datetime.now()} : converting TMP to LAB')
-    utauplugin2hts(path_plugin, path_lab, cfg.path_table, strict_sinsy_style=strict_sinsy_style)
+    utauplugin2hts(path_plugin, path_lab, cfg.table_path, strict_sinsy_style=strict_sinsy_style)
     print(f'{datetime.now()} : converting LAB to JSON')
     hts2json(path_lab, path_json)
     print(f'{datetime.now()} : converting LAB to WAV')
