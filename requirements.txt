@@ -1,8 +1,8 @@
 hydra-core
 joblib
-nnmnkwii
+nnmnkwii >= 0.0.23
 nnsvs
-numpy != 1.19.4
+numpy >= 1.20
 omegaconf
 scipy
 torch
