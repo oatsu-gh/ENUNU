@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2020 oatsu
+# Copyright (c) 2021 oatsu
 """
 eval.list と dev.list と train.list を生成する。
 utt_list.txtは作らなくていい気がする。

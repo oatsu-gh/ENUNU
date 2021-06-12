@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2020 oatsu
+# Copyright (c) 2021 oatsu
 """
 モノラベルを休符周辺で切断する。
 pau の直前で切断する。休符がすべて結合されていると考えて実行する。

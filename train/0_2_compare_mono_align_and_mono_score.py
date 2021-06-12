@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2020 oatsu
+# Copyright (c) 2021 oatsu
 """
 Sinsyの出力と音素数が一致するかだけをチェックする。
 チェックに通過したら mono_label フォルダから mono_dtwフォルダにコピーする。

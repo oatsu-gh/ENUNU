@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2020 oatsu
+# Copyright (c) 2021 oatsu
 """
 フルラベルを生成する。また、DB中のモノラベルを複製する。
 

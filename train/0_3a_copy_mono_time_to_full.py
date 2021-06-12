@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2020 oatsu
+# Copyright (c) 2021 oatsu
 """
 DBのモノラベルの時刻をフルラベルに書き写して、
 音声ファイルの発声時刻に合ったフルラベルを生成する。
