@@ -16,7 +16,7 @@ function xrun () {
 }
 
 #change-----------------------------------------------------------
-NNSVS_ROOT=~/documents/github/nnsvs
+NNSVS_ROOT=../nnsvs
 #change-----------------------------------------------------------
 script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 NNSVS_COMMON_ROOT=$NNSVS_ROOT/egs/_common/spsvs
@@ -48,7 +48,6 @@ else
 fi
 expdir=exp/$expname
 
-#change-----------------------------------------------------------
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     if [ ! -e $db_root ]; then
 	cat<<EOF
@@ -56,7 +55,6 @@ singing-database files were not found
 EOF
     fi
 fi
-#change-----------------------------------------------------------
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "stage 0: Data preparation"
