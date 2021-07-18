@@ -83,6 +83,13 @@ def utauplugin2hts(path_plugin, path_hts, path_table, strict_sinsy_style=False):
         target_note = full_label[0].note
         while full_label[0].note is target_note:
             del full_label[0]
+        # PREVを消しても前のノート分ずれているので、最初の音素開始時刻が0になるようにする。
+        # ずれを取得
+        offset = full_label[0].start
+        # 全音素の開始と終了時刻をずらす
+        for oneline in full_label:
+            oneline.start -= offset
+            oneline.end -= offset
     # [#NEXT] のノート(の情報がある行)を削る
     if next_exists:
         target_note = full_label[-1].note

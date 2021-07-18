@@ -1,40 +1,3 @@
-#! /usr/bin/env python3
-# coding: utf-8
-# Copyright (c) 2020 oatsu
-# Copyright (c) 2020 Ryuichi Yamamoto
-
-# ---------------------------------------------------------------------------------
-#
-# This 'hts2wav.py' file is reedit of 'synthesis.py' from
-# nnsvs/nnsvs/bin/synthesis.py, in NNSVS(https://github.com/r9y9/nnsvs).
-#
-# NNSVS is distributed under MIT License below.
-#
-# ---------------------------------------------------------------------------------
-#
-# MIT License
-#
-# Copyright (c) 2020 Ryuichi Yamamoto
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the 'Software'), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-#
-# ---------------------------------------------------------------------------------
 
 """
 NNSVSを利用して、ラベルから音声ファイルを生成する。
@@ -310,7 +273,7 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
     else:
         pass
     logger.info('Synthesize the wav file: %s', out_wav_path)
-    wav = synthesis(
+    f0, mgc, bap, wav = synthesis(
         config, device, label_path,
         timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
         duration_model, duration_config, duration_in_scaler, duration_out_scaler,
@@ -319,6 +282,14 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
 
     # サンプルレートとビット深度を指定してファイル出力
     generate_wav_file(config, wav, out_wav_path, logger)
+
+    # f0 mgc bap のファイル出力
+    with open(out_wav_path.replace('.wav', ".f0"), "wb") as f:
+        f0.astype(np.float64).tofile(f)
+    with open(out_wav_path.replace('.wav', ".mgc"), "wb") as f:
+        mgc.astype(np.float64).tofile(f)
+    with open(out_wav_path.replace('.wav', ".bap"), "wb") as f:
+        bap.astype(np.float64).tofile(f)
 
 
 def hts2wav(config: DictConfig, label_path: str, out_wav_path: str):
