@@ -16,6 +16,7 @@ from sys import argv
 
 import utaupy as up
 import yaml
+from natsort import natsorted
 from pydub import AudioSegment
 from tqdm import tqdm
 
@@ -141,9 +142,9 @@ def main(path_config_yaml):
         config = yaml.load(fy, Loader=yaml.FullLoader)
     out_dir = expanduser(config['out_dir'])
 
-    full_align_round_seg_files = sorted(glob(f'{out_dir}/full_align_round_seg/*.lab'))
-    full_score_round_seg_files = sorted(glob(f'{out_dir}/full_score_round_seg/*.lab'))
-    wav_files = sorted(glob(f'{out_dir}/wav/*.wav', recursive=True))
+    full_align_round_seg_files = natsorted(glob(f'{out_dir}/full_align_round_seg/*.lab'))
+    full_score_round_seg_files = natsorted(glob(f'{out_dir}/full_score_round_seg/*.lab'))
+    wav_files = natsorted(glob(f'{out_dir}/wav/*.wav', recursive=True))
 
     # フルラベルをtimelag用のフォルダに保存する。
     print('Preparing data for time-lag models')

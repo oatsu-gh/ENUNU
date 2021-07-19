@@ -17,6 +17,7 @@ from sys import argv
 from typing import Union
 
 import yaml
+from natsort import natsorted
 
 
 def generate_train_list(out_dir, interval: Union[int, None] = None):
@@ -28,25 +29,25 @@ def generate_train_list(out_dir, interval: Union[int, None] = None):
     """
     # 学習対象のファイル一覧を取得
     utt_list = glob(f'{join(out_dir)}/acoustic/wav/*.wav')
-    utt_list = sorted([splitext(basename(path))[0] for path in utt_list])
+    utt_list = natsorted([splitext(basename(path))[0] for path in utt_list])
+    len_utt_list = len(utt_list)
+    if len_utt_list == 0:
+        raise Exception(f'There are no wav files in "{join(out_dir)}/acoustic/wav".')
 
     if interval is None:
-        len_utt_list = len(utt_list)
         for i in (23, 19, 17, 13, 11):
-            if (len_utt_list + 5 > i) and (len_utt_list % i != 0):
+            if (i < len_utt_list + 5) and (len_utt_list % i != 0):
                 interval = i
                 break
         else:
             interval = 13
-            while len_utt_list % interval == 0:
-                interval += 1
 
     # 評価用が5分の1より多いと困るので
     elif interval <= 5:
         raise ValueError('Argument "interval" must be larger than 5.')
     makedirs(join(out_dir, 'list'), exist_ok=True)
 
-    print(f'generate_train_list: interval: {interval}')
+    print(f'generate_train_list.py: interval = {interval}')
 
     # 各種曲名リストを作る
     eval_list = [songname for idx, songname in enumerate(utt_list) if idx % interval == 0]

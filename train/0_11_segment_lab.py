@@ -15,6 +15,7 @@ import yaml
 from tqdm import tqdm
 from utaupy.hts import HTSFullLabel
 from utaupy.label import Label
+from natsort import natsorted
 
 
 def all_phonemes_are_rest(label) -> bool:
@@ -157,10 +158,10 @@ def main(path_config_yaml, mode='short'):
         config = yaml.load(fy, Loader=yaml.FullLoader)
     out_dir = config['out_dir']
 
-    full_score_round_files = sorted(glob(f'{out_dir}/full_score_round/*.lab'))
-    mono_score_round_files = sorted(glob(f'{out_dir}/mono_score_round/*.lab'))
-    full_align_round_files = sorted(glob(f'{out_dir}/full_align_round/*.lab'))
-    mono_align_round_files = sorted(glob(f'{out_dir}/mono_align_round/*.lab'))
+    full_score_round_files = natsorted(glob(f'{out_dir}/full_score_round/*.lab'))
+    mono_score_round_files = natsorted(glob(f'{out_dir}/mono_score_round/*.lab'))
+    full_align_round_files = natsorted(glob(f'{out_dir}/full_align_round/*.lab'))
+    mono_align_round_files = natsorted(glob(f'{out_dir}/mono_align_round/*.lab'))
 
     makedirs(f'{out_dir}/full_score_round_seg', exist_ok=True)
     makedirs(f'{out_dir}/full_align_round_seg', exist_ok=True)
@@ -233,4 +234,4 @@ if __name__ == '__main__':
     print('[ Stage 0 ] [ Step 3b ] ')
     print('Segment labels in full_align_round, mono_align, full_score_round, mono_score_round.')
     print('----------------------------------------------------------------------------------')
-    main(argv[1])
+    main(argv[1], mode='short')

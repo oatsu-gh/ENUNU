@@ -16,21 +16,52 @@ import yaml
 from tqdm import tqdm
 
 
-def check_lab_files(lab_dir):
+def check_lab_files(lab_dir, threshold=0):
     """
-    時刻がちゃんとしてるか点検
+    発声時間が負でないか点検する。
     """
     mono_lab_files = sorted(glob(f'{lab_dir}/*.lab'))
-    # 発声時間が短すぎないか点検
     invalid_lab_files = []
     for path_mono in tqdm(mono_lab_files):
         label = up.label.load(path_mono)
-        if not label.is_valid(5):
+        if not label.is_valid(threshold):
             invalid_lab_files.append(path_mono)
-    if len(invalid_lab_files) != 0:
+    if len(invalid_lab_files) != threshold:
         print('LABファイルの発声時刻に不具合があります。以下のファイルを点検してください。')
         pprint(invalid_lab_files)
-        sys.exit(1)
+        raise Exception
+
+
+def repair_too_short_phoneme(lab_dir, threshold=5) -> None:
+    """
+    LABファイルの中の発声時刻が短すぎる音素(5ms未満の時とか)を修正する。
+    直前の音素の長さを削る。
+    一番最初の音素が短い場合のみ修正できない。
+    """
+    mono_lab_files = glob(f'{lab_dir}/*.lab')
+    threshold_100ns = threshold * 10000
+    for path_mono in tqdm(mono_lab_files):
+        # LABファイルを読み取る
+        label = up.label.load(path_mono)
+        # 短い音素が一つでもある場合
+        if all(phoneme.duration >= threshold_100ns for phoneme in label):
+            continue
+        # 短い音素が連続しても不具合が起こらないように逆向きにループする
+        print(f'短い音素を修正します。: {path_mono}')
+        if label[0].duration < threshold_100ns:
+            raise ValueError('最初の音素が短いです。修正できません。')
+        for i, phoneme in enumerate(reversed(label)):
+            # 発声時間が閾値より短い場合
+            if phoneme.duration < threshold_100ns:
+                # 閾値との差分を計算する。この分だけずらす。
+                delta_t = threshold_100ns - phoneme.duration
+                # 対象の音素の開始時刻をずらして、発生時間を伸ばす。
+                phoneme.start -= delta_t
+                # 直前の音素の終了時刻もずらす。
+                # label[-(i + 1) - 1]
+                label[-i - 2].end -= delta_t
+            # 修正済みデータで上書き保存
+            label.write(path_mono)
 
 
 def main(path_config_yaml):
@@ -48,6 +79,7 @@ def main(path_config_yaml):
     # LABファイルを点検する
     print(f'Checking LAB files in {lab_dir}')
     check_lab_files(lab_dir)
+    repair_too_short_phoneme(lab_dir)
 
 
 if __name__ == '__main__':

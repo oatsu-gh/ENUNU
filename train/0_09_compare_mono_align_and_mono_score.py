@@ -13,6 +13,7 @@ from sys import argv
 
 import utaupy as up
 import yaml
+from natsort import natsorted
 from tqdm import tqdm
 
 
@@ -28,9 +29,9 @@ def compare_lab_file(path_mono_label, path_sinsy_mono):
     )
     for mono_align_phoneme, mono_score_phoneme in zip(mono_label, sinsy_mono):
         assert mono_align_phoneme.symbol == mono_score_phoneme.symbol, \
-            'DB同梱のラベル("{}", {})と楽譜から生成したラベル("{}", {})の音素記号が一致しません。'.format(
-                mono_align_phoneme.symbol, path_mono_label,
-                mono_score_phoneme.symbol, path_sinsy_mono
+            'DB同梱のラベル({}, "{}")と楽譜から生成したラベル({}, "{}")の音素記号が一致しません。\n'.format(
+                path_mono_label, mono_align_phoneme,
+                path_sinsy_mono, mono_score_phoneme
             )
 
 
@@ -41,8 +42,8 @@ def main(path_config_yaml):
     with open(path_config_yaml, 'r') as fy:
         config = yaml.load(fy, Loader=yaml.FullLoader)
     out_dir = config['out_dir']
-    mono_align_files = sorted(glob(f'{out_dir}/mono_align_round/*.lab'))
-    mono_score_files = sorted(glob(f'{out_dir}/mono_score_round/*.lab'))
+    mono_align_files = natsorted(glob(f'{out_dir}/mono_align_round/*.lab'))
+    mono_score_files = natsorted(glob(f'{out_dir}/mono_score_round/*.lab'))
 
     # 音素数と音素記号が一致するか確認する。
     print('Comparing mono-align-LAB and mono-score-LAB')

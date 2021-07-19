@@ -10,10 +10,11 @@ UST版
 """
 from glob import glob
 from os import makedirs
-from os.path import basename, expanduser, join, splitext
+from os.path import basename, join, splitext
 from sys import argv
 
 import yaml
+from natsort import natsorted
 from tqdm import tqdm
 from utaupy.utils import ust2hts
 
@@ -39,9 +40,9 @@ def compare_number_of_ustfiles_and_labfiles(ust_dir, mono_align_dir):
     入力ファイルの数が一致するか点検する。
     """
     # UST一覧を取得
-    ust_files = sorted(glob(f'{ust_dir}/*.ust'))
+    ust_files = natsorted(glob(f'{ust_dir}/*.ust'))
     # DB内のラベルファイル一覧を取得
-    mono_files = sorted(glob(f'{mono_align_dir}/*.lab'))
+    mono_files = natsorted(glob(f'{mono_align_dir}/*.lab'))
     # 個数が合うか点検
     assert len(ust_files) == len(mono_files), \
         f'USTファイル数({len(ust_files)})とLABファイル数({len(mono_files)})が一致しません'
@@ -52,9 +53,9 @@ def compare_name_of_ustfiles_and_labfiles(ust_dir, mono_align_dir):
     入力ファイルの名前が一致するか点検する。
     """
     # UST一覧を取得
-    ust_files = sorted(glob(f'{ust_dir}/*.ust'))
+    ust_files = natsorted(glob(f'{ust_dir}/*.ust'))
     # DB内のラベルファイル一覧を取得
-    mono_files = sorted(glob(f'{mono_align_dir}/*.lab'))
+    mono_files = natsorted(glob(f'{mono_align_dir}/*.lab'))
 
     # 名前が合うか点検
     songnames_dont_match = []
