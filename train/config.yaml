@@ -24,9 +24,9 @@ exclude_songs: []
 # This singing voice database contains the unvoiced vowels "I" and "U".
 # To enable the unvoiced vowels, modified version of sinsy dictionary files
 # are needed.
-table_path: "dic/kana2phonemes_utf8_for_oto2lab.table"
+table_path: "dic/kana2phonemes_001_oto2lab.table"
 ## HTS-style question used for extracting musical/linguistic context from musicxml files
-question_path: "hed/jp_qst_crazy_mono_010_enunu_209D.hed"
+question_path: "hed/jp_qst_crazy_mono_012_enunu_212D.hed"
 
 # Time-lag constraints to filter outliers
 timelag_allowed_range: [-20, 19]
@@ -68,6 +68,7 @@ acoustic_train: myconfig
 acoustic_data: myconfig
 
 # Pretrained model dir (leave empty to disable)
+# pretrained_expdir: exp/unnamed_enunu_training_kit
 pretrained_expdir:
 
 ###########################################################
@@ -80,4 +81,4 @@ acoustic_synthesis: defaults
 # latest.pth or best.pth
 timelag_eval_checkpoint: best_loss.pth
 duration_eval_checkpoint: best_loss.pth
-acoustic_eval_checkpoint: latest.pth
+acoustic_eval_checkpoint: best_loss.pth
