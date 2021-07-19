@@ -8,6 +8,7 @@ timelag とか duration とか acoustic の学習用フォルダにコピーす�
 
 音声の offset_correction がよくわからんので実装できてない。
 """
+import warnings
 from glob import glob
 from os import makedirs
 from os.path import basename, expanduser, splitext
@@ -17,8 +18,11 @@ from sys import argv
 import utaupy as up
 import yaml
 from natsort import natsorted
-from pydub import AudioSegment
 from tqdm import tqdm
+
+with warnings.catch_warnings():
+    warnings.simplefilter('ignore')
+    from pydub import AudioSegment
 
 
 def lab_fix_offset(path_lab):

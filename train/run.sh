@@ -55,7 +55,7 @@ expdir=exp/$expname
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     if [ ! -e $db_root ]; then
 	cat<<EOF
-singing-database files were not found
+singing-database is not found
 EOF
     fi
 fi
@@ -66,8 +66,9 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "##########################################"
     echo "#  stage 0: Data preparation             #"
     echo "##########################################"
-    rm -rf data dump
-    bash data_prep.sh ./config.yaml
+    rm -rf $out_dir $dumpdir
+    python preprocess_data.py ./config.yaml
+    echo ""
 fi
 
 
@@ -77,6 +78,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     echo "#  stage 1: Feature generation           #"
     echo "##########################################"
     . $NNSVS_COMMON_ROOT/feature_generation.sh
+    echo ""
 fi
 
 
@@ -86,6 +88,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     echo "#  stage 2: Time-lag model training      #"
     echo "##########################################"
     . $NNSVS_COMMON_ROOT/train_timelag.sh
+    echo ""
 fi
 
 
@@ -95,6 +98,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "#  stage 3: Duration model training      #"
     echo "##########################################"
     . $NNSVS_COMMON_ROOT/train_duration.sh
+    echo ""
 fi
 
 
@@ -104,6 +108,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "#  stage 4: Training acoustic model      #"
     echo "##########################################"
     . $NNSVS_COMMON_ROOT/train_acoustic.sh
+    echo ""
 fi
 
 
@@ -113,6 +118,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     echo "#  stage 5: Feature generation           #"
     echo "##########################################"
     . $NNSVS_COMMON_ROOT/generate.sh
+    echo ""
 fi
 
 
@@ -122,6 +128,7 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     echo "#  stage 6: Waveform synthesis           #"
     echo "##########################################"
     . $NNSVS_COMMON_ROOT/synthesis.sh
+    echo ""
 fi
 
 
@@ -131,4 +138,5 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
     echo "#  stage 7: Release preparation          #"
     echo "##########################################"
     python prepare_model_for_release_enunu.py
+    echo ""
 fi
