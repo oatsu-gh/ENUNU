@@ -17,20 +17,26 @@ import yaml
 from tqdm import tqdm
 
 
-def copy_mono_align_time_to_full(path_mono_in, path_full_in, path_full_out):
+def copy_mono_align_time_to_full(path_mono_align_in, path_full_score_in, path_full_align_out):
     """
     モノラベルの発声時刻をフルラベルにコピーする。
     """
-    mono_label = up.label.load(path_mono_in)
-    full_label = up.label.load(path_full_in)
+    mono_align_label = up.label.load(path_mono_align_in)
+    full_label = up.label.load(path_full_score_in)
     # ラベル内の各行を比較する。
-    for ph_mono, ph_full in zip(mono_label, full_label):
+    for ph_mono_align, ph_full in tuple(zip(mono_align_label, full_label))[:-1]:
         # 発声開始時刻を上書き
-        ph_full.start = ph_mono.start
+        ph_full.start = ph_mono_align.start
         # 発声終了時刻を上書き
-        ph_full.end = ph_mono.end
+        ph_full.end = ph_mono_align.end
+    # 最後のノートは休符だったら終了時刻は楽譜に合わせる。そうじゃなかったら手動ラベルに合わせる。
+    full_label[-1].start = mono_align_label[-1].start
+    if mono_align_label[-1].symbol not in ['pau', 'sil']:
+        print(mono_align_label[-1].symbol)
+        full_label[-1].end = mono_align_label[-1].end
+
     # ファイル出力
-    full_label.write(path_full_out)
+    full_label.write(path_full_align_out)
 
 
 def main(path_config_yaml):
