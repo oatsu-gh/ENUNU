@@ -2,6 +2,7 @@
 *.wav
 *.pth
 *.cache
+*.zip
 #data
 dump
 outputs

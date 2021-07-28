@@ -4,7 +4,7 @@
 # Is trained with ENUNU specific recipe
 trained_for_enunu:      true
 # Table (lyric -> phonemes) file path.
-table_path:             dic/kana2phonemes_001_oto2lab.table
+table_path:             dic/kana2phonemes_002_oto2lab.table
 # bit depth of output wav file.
 # 32 or 16 (recommended:32)
 bit_depth:              32
@@ -21,7 +21,7 @@ gain_normalize:         false
 
 # How was the model trained.
 frame_period:           5
-question_path:          hed/jp_qst_crazy_mono_012_enunu_212D.hed
+question_path:          hed/jp_qst_crazy_mono_013_enunu_221D.hed
 log_f0_conditioning:    true
 
 # Use ground truth duration or not
