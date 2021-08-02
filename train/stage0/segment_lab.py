@@ -193,6 +193,7 @@ def split_label(label: Union[Label, HTSFullLabel], mode: str) -> List[Union[Labe
     ラベルを分割してリストにして返す。フルラベルとモノラベルを自動で使い分ける。
     mode: 'short' か 'long' のいずれか
     """
+    middle_frequency = 10
     if mode not in ('short', 'middle', 'long'):
         raise ValueError('Argument "mode" must be "short" or "long".')
 
@@ -200,14 +201,14 @@ def split_label(label: Union[Label, HTSFullLabel], mode: str) -> List[Union[Labe
         if mode == 'short':
             result = split_mono_label_short(label)
         elif mode == 'middle':
-            result = split_mono_label_middle(label, 10)
+            result = split_mono_label_middle(label, middle_frequency)
         elif mode == 'long':
             result = split_mono_label_long(label)
     elif isinstance(label, HTSFullLabel):
         if mode == 'short':
             result = split_full_label_short(label)
         elif mode == 'middle':
-            result = split_full_label_middle(label, 10)
+            result = split_full_label_middle(label, middle_frequency)
         elif mode == 'long':
             result = split_full_label_long(label)
     return result
