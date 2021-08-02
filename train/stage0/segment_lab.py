@@ -57,14 +57,16 @@ def split_mono_label_short(label: Label) -> List[Label]:
     return result
 
 
-def split_mono_label_middle(label: Label, frequency=10) -> List[Label]:
+def split_mono_label_middle(label: Label, frequency) -> List[Label]:
     """
     モノラベルを分割する。分割後の複数のLabelからなるリストを返す。
     pauが10回出現するたびに分割する。
     """
+    if frequency <= 0:
+        raise ValueError('Argument "frequency" must be positive integer.')
+
     new_label = Label()
     result = [new_label]
-
     new_label.append(label[0])
 
     # pauが出現する回数をカウントする
@@ -126,11 +128,13 @@ def split_full_label_short(full_label: HTSFullLabel) -> list:
     return result
 
 
-def split_full_label_middle(full_label: HTSFullLabel, frequency=10) -> List[HTSFullLabel]:
+def split_full_label_middle(full_label: HTSFullLabel, frequency: int) -> List[HTSFullLabel]:
     """
     モノラベルを分割する。分割後の複数のLabelからなるリストを返す。
     pauが10回出現するたびに分割する。
     """
+    if frequency <= 0:
+        raise ValueError('Argument "frequency" must be positive integer.')
     new_label = HTSFullLabel()
     result = [new_label]
 
@@ -196,14 +200,14 @@ def split_label(label: Union[Label, HTSFullLabel], mode: str) -> List[Union[Labe
         if mode == 'short':
             result = split_mono_label_short(label)
         elif mode == 'middle':
-            result = split_mono_label_middle(label)
+            result = split_mono_label_middle(label, 10)
         elif mode == 'long':
             result = split_mono_label_long(label)
     elif isinstance(label, HTSFullLabel):
         if mode == 'short':
             result = split_full_label_short(label)
         elif mode == 'middle':
-            result = split_full_label_middle(label)
+            result = split_full_label_middle(label, 10)
         elif mode == 'long':
             result = split_full_label_long(label)
     return result
@@ -255,8 +259,7 @@ def main(path_config_yaml):
     for path in tqdm(full_score_round_files):
         songname = splitext(basename(path))[0]
         label = up.hts.load(path)
-        label_segments = split_label(label, mode)
-        for idx, segment in enumerate(label_segments):
+        for idx, segment in enumerate(split_label(label, mode)):
             path_out = f'{out_dir}/full_score_round_seg/{songname}_seg{idx}.lab'
             segment.write(path_out, strict_sinsy_style=False)
 
@@ -264,8 +267,7 @@ def main(path_config_yaml):
     for path in tqdm(full_align_round_files):
         songname = splitext(basename(path))[0]
         label = up.hts.load(path)
-        label_segments = split_label(label, mode)
-        for idx, segment in enumerate(label_segments):
+        for idx, segment in enumerate(split_label(label, mode)):
             path_out = f'{out_dir}/full_align_round_seg/{songname}_seg{idx}.lab'
             print(type(segment), path_out)
             segment.write(path_out, strict_sinsy_style=False)
@@ -274,8 +276,7 @@ def main(path_config_yaml):
     for path in tqdm(mono_score_round_files):
         songname = splitext(basename(path))[0]
         label = up.label.load(path)
-        label_segments = split_label(label, mode)
-        for idx, segment in enumerate(label_segments):
+        for idx, segment in enumerate(split_label(label, mode)):
             segment.write(f'{out_dir}/mono_score_round_seg/{songname}_seg{idx}.lab')
 
     print('Segmenting mono_align_round label files')
@@ -283,8 +284,7 @@ def main(path_config_yaml):
     for path in tqdm(mono_align_round_files):
         songname = splitext(basename(path))[0]
         label = up.label.load(path)
-        label_segments = split_label(label, mode)
-        for idx, segment in enumerate(label_segments):
+        for idx, segment in enumerate(split_label(label, mode)):
             segment.write(f'{out_dir}/mono_align_round_seg/{songname}_seg{idx}.lab')
 
 
