@@ -29,12 +29,14 @@ def lab_fix_offset(path_lab):
     """
     ラベルの開始時刻をゼロにする。(音声を切断したため。)
     ファイルは上書きする。
+    offset: 最初に余裕をどのくらい持たせるか[100ns]
     """
     label = up.label.load(path_lab)
-    offset = label[0].start
+    # どのくらいずらすか
+    dt = label[0].start
     for phoneme in label:
-        phoneme.start -= offset
-        phoneme.end -= offset
+        phoneme.start -= dt
+        phoneme.end -= dt
     label.write(path_lab)
 
 
@@ -86,10 +88,9 @@ def segment_wav(path_wav_in, acoustic_wav_dir, corresponding_full_align_round_se
 
     full_align_round_seg_files: full_align_round_seg の中にあるファイル(切断時刻のデータを持っている)
     """
-    # TODO: 処理が遅いと思うので、並列実行できるようにする。
     # 音声ファイルを読み取る
     wav = AudioSegment.from_file(path_wav_in, format='wav')
-    for path_lab in tqdm(corresponding_full_align_round_seg_files):
+    for path_lab in corresponding_full_align_round_seg_files:
         label = up.label.load(path_lab)
         # 切断時刻を取得
         t_start_ms = round(label[0].start / 10000)
@@ -101,8 +102,9 @@ def segment_wav(path_wav_in, acoustic_wav_dir, corresponding_full_align_round_se
         wav_slice.export(path_wav_seg_out, format='wav')
 
 
-def prepare_data_for_acoustic_models(
-        full_align_round_seg_files: list, full_score_round_seg_files: list, wav_files: list, acoustic_dir):
+def prepare_data_for_acoustic_models(full_align_round_seg_files: list,
+                                     full_score_round_seg_files: list,
+                                     wav_files: list, acoustic_dir: str):
     """
     acousticモデル用に音声ファイルとラベルファイルを複製する。
     """
@@ -163,19 +165,15 @@ def main(path_config_yaml):
 
     # フルラベルのオフセット修正をして、acoustic用のフォルダに保存する。
     # wavファイルをlabファイルのセグメントに合わせて切断
+    # wavファイルの前後にどのくらい余白を設けるか
     print('Preparing data for acoustic models')
     acoustic_dir = f'{out_dir}/acoustic'
-    prepare_data_for_acoustic_models(
-        full_align_round_seg_files, full_score_round_seg_files, wav_files, acoustic_dir)
+    prepare_data_for_acoustic_models(full_align_round_seg_files,
+                                     full_score_round_seg_files,
+                                     wav_files, acoustic_dir)
 
 
 if __name__ == '__main__':
-    print('----------------------------------------------------------------------------------')
-    print('[ Stage 0 ] [ Step 4 ] ')
-    print('- Segment WAV files and save to acoustic model directory.')
-    print('- Copy LAB files to each model directory.')
-    print('- Fix offset of LAB files for acoustic and duration model.')
-    print('----------------------------------------------------------------------------------')
     if len(argv) == 1:
         main('config.yaml')
     else:

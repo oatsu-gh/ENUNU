@@ -58,7 +58,4 @@ def main(path_config_yaml):
 
 
 if __name__ == '__main__':
-    if len(argv) == 1:
-        main('config.yaml')
-    else:
-        main(argv[1].strip('"'))
+    main(argv[1].strip('"'))

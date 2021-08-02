@@ -8,6 +8,7 @@ UST版
 - '{out_dir}/sinsy_mono' にモノラベルを生成する。(この工程は省略した)
 - '{out_dir}/mono_label' にDBのモノラベルを複製する
 """
+import logging
 from glob import glob
 from os import makedirs
 from os.path import basename, join, splitext
@@ -67,9 +68,9 @@ def compare_name_of_ustfiles_and_labfiles(ust_dir, mono_align_dir):
     # すべての名前が一致したか確認
     if len(songnames_dont_match) != 0:
         for path_ust_and_path_lab in songnames_dont_match:
-            print('USTファイル名とLABファイル名が一致しません:')
-            print('  path_ust:', path_ust_and_path_lab[0])
-            print('  path_lab:', path_ust_and_path_lab[1])
+            logging.error('USTファイル名とLABファイル名が一致しません:')
+            logging.error('  path_ust: %s', path_ust_and_path_lab[0])
+            logging.error('  path_lab: %s', path_ust_and_path_lab[1])
         raise ValueError('USTファイル名とLABファイル名が一致しませんでした。ファイル名を点検してください')
 
 
@@ -103,7 +104,4 @@ def main(path_config_yaml):
 
 
 if __name__ == '__main__':
-    if len(argv) == 1:
-        main('config.yaml')
-    else:
-        main(argv[1].strip('"'))
+    main(argv[1].strip('"'))

@@ -12,10 +12,10 @@ from typing import List, Union
 
 import utaupy as up
 import yaml
+from natsort import natsorted
 from tqdm import tqdm
 from utaupy.hts import HTSFullLabel
 from utaupy.label import Label
-from natsort import natsorted
 
 
 def all_phonemes_are_rest(label) -> bool:
@@ -39,7 +39,7 @@ def all_phonemes_are_rest(label) -> bool:
     raise ValueError("Argument 'label' must be Label object or HTSFullLabel object.")
 
 
-def split_mono_label_short(label: Label) -> list:
+def split_mono_label_short(label: Label) -> List[Label]:
     """
     モノラベルを分割する。分割後の複数のLabelからなるリストを返す。
     """
@@ -57,7 +57,34 @@ def split_mono_label_short(label: Label) -> list:
     return result
 
 
-def split_mono_label_long(label: Label) -> list:
+def split_mono_label_middle(label: Label, frequency=10) -> List[Label]:
+    """
+    モノラベルを分割する。分割後の複数のLabelからなるリストを返す。
+    pauが10回出現するたびに分割する。
+    """
+    new_label = Label()
+    result = [new_label]
+
+    new_label.append(label[0])
+
+    # pauが出現する回数をカウントする
+    counter = 0
+    for phoneme in label[1:-1]:
+        if phoneme.symbol == 'pau':
+            counter += 1
+            # pauが出現してfrequency回目のとき
+            if counter == frequency:
+                new_label = Label()
+                result.append(new_label)
+                # 回数をリセット
+                counter = 0
+        new_label.append(phoneme)
+    # 最後の音素を追加
+    new_label.append(label[-1])
+    return result
+
+
+def split_mono_label_long(label: Label) -> List[Label]:
     """
     モノラベルを分割する。分割後の複数のLabelからなるリストを返す。
     [pau][pau], [pau][sil] のいずれかの並びで切断する。
@@ -89,6 +116,34 @@ def split_full_label_short(full_label: HTSFullLabel) -> list:
         if oneline.phoneme.identity == 'pau':
             new_label = HTSFullLabel()
             result.append(new_label)
+        new_label.append(oneline)
+    # 最後の行を追加
+    new_label.append(full_label[-1])
+    # 休符だけの後奏部分があった場合は直前のラベルにまとめる。
+    if len(result) >= 2 and all_phonemes_are_rest(result[-1]):
+        result[-2] += result[-1]
+        del result[-1]
+    return result
+
+
+def split_full_label_middle(full_label: HTSFullLabel, frequency=10) -> List[HTSFullLabel]:
+    """
+    モノラベルを分割する。分割後の複数のLabelからなるリストを返す。
+    pauが10回出現するたびに分割する。
+    """
+    new_label = HTSFullLabel()
+    result = [new_label]
+
+    new_label.append(full_label[0])
+    # pauが出現する回数をカウントする
+    counter = 0
+    for oneline in full_label[1:-1]:
+        if oneline.phoneme.identity == 'pau':
+            counter += 1
+            if counter == frequency:
+                new_label = HTSFullLabel()
+                result.append(new_label)
+                counter = 0
         new_label.append(oneline)
     # 最後の行を追加
     new_label.append(full_label[-1])
@@ -134,29 +189,57 @@ def split_label(label: Union[Label, HTSFullLabel], mode: str) -> List[Union[Labe
     ラベルを分割してリストにして返す。フルラベルとモノラベルを自動で使い分ける。
     mode: 'short' か 'long' のいずれか
     """
-    if mode not in ('short', 'long'):
+    if mode not in ('short', 'middle', 'long'):
         raise ValueError('Argument "mode" must be "short" or "long".')
 
     if isinstance(label, Label):
         if mode == 'short':
             result = split_mono_label_short(label)
+        elif mode == 'middle':
+            result = split_mono_label_middle(label)
         elif mode == 'long':
             result = split_mono_label_long(label)
     elif isinstance(label, HTSFullLabel):
         if mode == 'short':
             result = split_full_label_short(label)
+        elif mode == 'middle':
+            result = split_full_label_middle(label)
         elif mode == 'long':
             result = split_full_label_long(label)
     return result
 
 
-def main(path_config_yaml, mode='short'):
+def test_full(mode):
+    """
+    単独のフルラベルを休符で分割する。
+    """
+    path_in = input('path_in: ')
+    label = up.hts.load(path_in)
+    split_result = split_label(label, mode=mode)
+    for i, full_label in enumerate(split_result):
+        path_out = path_in.replace('.lab', f'_split_{str(i).zfill(6)}.lab')
+        full_label.write(path_out, strict_sinsy_style=False)
+
+
+def test_mono():
+    """
+    単独のモノラベルを休符で分割する。
+    """
+    path_in = input('path_in: ')
+    split_result = split_mono_label_long(up.label.load(path_in))
+    for i, mono_label in enumerate(split_result):
+        path_out = path_in.replace('.lab', f'_split_{str(i).zfill(6)}.lab')
+        mono_label.write(path_out)
+
+
+def main(path_config_yaml):
     """
     ラベルファイルを取得して分割する。
     """
     with open(path_config_yaml, 'r') as fy:
         config = yaml.load(fy, Loader=yaml.FullLoader)
     out_dir = config['out_dir']
+    mode = config['segmentation_mode']
 
     full_score_round_files = natsorted(glob(f'{out_dir}/full_score_round/*.lab'))
     mono_score_round_files = natsorted(glob(f'{out_dir}/mono_score_round/*.lab'))
@@ -174,8 +257,8 @@ def main(path_config_yaml, mode='short'):
         label = up.hts.load(path)
         label_segments = split_label(label, mode)
         for idx, segment in enumerate(label_segments):
-            segment.write(f'{out_dir}/full_score_round_seg/{songname}_seg{idx}.lab',
-                          strict_sinsy_style=False)
+            path_out = f'{out_dir}/full_score_round_seg/{songname}_seg{idx}.lab'
+            segment.write(path_out, strict_sinsy_style=False)
 
     print('Segmenting full_align_round label files')
     for path in tqdm(full_align_round_files):
@@ -183,8 +266,9 @@ def main(path_config_yaml, mode='short'):
         label = up.hts.load(path)
         label_segments = split_label(label, mode)
         for idx, segment in enumerate(label_segments):
-            segment.write(f'{out_dir}/full_align_round_seg/{songname}_seg{idx}.lab',
-                          strict_sinsy_style=False)
+            path_out = f'{out_dir}/full_align_round_seg/{songname}_seg{idx}.lab'
+            print(type(segment), path_out)
+            segment.write(path_out, strict_sinsy_style=False)
 
     print('Segmenting mono_score_round label files')
     for path in tqdm(mono_score_round_files):
@@ -204,34 +288,8 @@ def main(path_config_yaml, mode='short'):
             segment.write(f'{out_dir}/mono_align_round_seg/{songname}_seg{idx}.lab')
 
 
-def test_full():
-    """
-    単独のフルラベルを休符で分割する。
-    """
-    path_in = input('path_in: ')
-    label = up.hts.load(path_in)
-    split_result = split_label(label, mode='short')
-    for i, full_label in enumerate(split_result):
-        path_out = path_in.replace('.lab', f'_split_{str(i).zfill(6)}.lab')
-        full_label.write(path_out, strict_sinsy_style=False)
-
-
-def test_mono():
-    """
-    単独のモノラベルを休符で分割する。
-    """
-    path_in = input('path_in: ')
-    split_result = split_mono_label_long(up.label.load(path_in))
-    for i, mono_label in enumerate(split_result):
-        path_out = path_in.replace('.lab', f'_split_{str(i).zfill(6)}.lab')
-        mono_label.write(path_out)
-
-
 if __name__ == '__main__':
-    # test_full()
-    # test_mono()
-    print('----------------------------------------------------------------------------------')
-    print('[ Stage 0 ] [ Step 3b ] ')
-    print('Segment labels in full_align_round, mono_align, full_score_round, mono_score_round.')
-    print('----------------------------------------------------------------------------------')
-    main(argv[1], mode='short')
+    if len(argv) == 1:
+        main('config.yaml')
+    else:
+        main(argv[1].strip('"'))

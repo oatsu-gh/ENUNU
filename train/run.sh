@@ -69,6 +69,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "#                                       #"
     echo "#########################################"
     rm -rf $out_dir $dumpdir
+    rm -f stage0.log
     python preprocess_data.py ./config.yaml
     echo ""
 fi

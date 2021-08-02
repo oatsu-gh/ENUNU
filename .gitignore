@@ -1,4 +1,5 @@
 *.exe
+*.log
 *.wav
 *.pth
 *.cache
