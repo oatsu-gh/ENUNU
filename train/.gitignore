@@ -1,0 +1,14 @@
+data
+dump
+exp
+nnsvs
+singing_database
+
+*.ini
+*.lab
+*.mid
+*.ust
+*.wav
+*.xml
+*.musicxml
+*.zip

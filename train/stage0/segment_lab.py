@@ -193,7 +193,7 @@ def split_label(label: Union[Label, HTSFullLabel], mode: str) -> List[Union[Labe
     ラベルを分割してリストにして返す。フルラベルとモノラベルを自動で使い分ける。
     mode: 'short' か 'long' のいずれか
     """
-    middle_frequency = 10
+    middle_frequency = 9
     if mode not in ('short', 'middle', 'long'):
         raise ValueError('Argument "mode" must be "short" or "long".')
 
@@ -237,6 +237,15 @@ def test_mono():
         mono_label.write(path_out)
 
 
+def remove_zensou_and_kousou(path_lab):
+    """
+    長すぎてGPUメモリを食いつぶすような音素を除去(前奏、間奏、後奏とか)
+    """
+    label = up.label.load(path_lab)
+    label.data = label.data[1:-1]
+    label.write(path_lab)
+
+
 def main(path_config_yaml):
     """
     ラベルファイルを取得して分割する。
@@ -270,7 +279,6 @@ def main(path_config_yaml):
         label = up.hts.load(path)
         for idx, segment in enumerate(split_label(label, mode)):
             path_out = f'{out_dir}/full_align_round_seg/{songname}_seg{idx}.lab'
-            print(type(segment), path_out)
             segment.write(path_out, strict_sinsy_style=False)
 
     print('Segmenting mono_score_round label files')
@@ -278,7 +286,8 @@ def main(path_config_yaml):
         songname = splitext(basename(path))[0]
         label = up.label.load(path)
         for idx, segment in enumerate(split_label(label, mode)):
-            segment.write(f'{out_dir}/mono_score_round_seg/{songname}_seg{idx}.lab')
+            path_out = f'{out_dir}/mono_score_round_seg/{songname}_seg{idx}.lab'
+            segment.write(path_out)
 
     print('Segmenting mono_align_round label files')
     # NOTE: ここだけ出力フォルダ名が 入力フォルダ名_seg ではないので注意
@@ -286,7 +295,8 @@ def main(path_config_yaml):
         songname = splitext(basename(path))[0]
         label = up.label.load(path)
         for idx, segment in enumerate(split_label(label, mode)):
-            segment.write(f'{out_dir}/mono_align_round_seg/{songname}_seg{idx}.lab')
+            path_out = f'{out_dir}/mono_align_round_seg/{songname}_seg{idx}.lab'
+            segment.write(path_out)
 
 
 if __name__ == '__main__':
