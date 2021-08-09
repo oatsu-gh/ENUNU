@@ -1,8 +1,36 @@
-
+#!/usr/bin/env python3
+# Copyright (c) 2021 oatsu
+# Copyright (c) 2021 maka_makamo
+# Copyright (c) 2020 Ryuichi Yamamoto
 """
-NNSVSを利用して、ラベルから音声ファイルを生成する。
-nnsvs-synthesis コマンドの源である nnsvs.bin.synthesis.py をENUNU用に改変した。
+フルラベルから音声ファイルを生成する。
+nnsvs.bin.synthesis を改変した。
 """
+# ---------------------------------------------------------------------------------
+#
+# MIT License
+#
+# Copyright (c) 2020 Ryuichi Yamamoto
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the 'Software'), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# ---------------------------------------------------------------------------------
 
 from datetime import datetime
 from os.path import join, relpath, split, splitext
@@ -14,9 +42,10 @@ import numpy as np
 import torch
 from hydra.experimental import compose, initialize
 from nnmnkwii.io import hts
-from nnsvs.gen import (gen_waveform, postprocess_duration, predict_acoustic,
+from nnsvs.gen import (postprocess_duration, predict_acoustic,
                        predict_duration, predict_timelag)
 from nnsvs.logger import getLogger
+from nnsvs_gen_override import gen_waveform
 from omegaconf import DictConfig, OmegaConf
 from scipy.io import wavfile
 
@@ -45,52 +74,44 @@ def maybe_set_normalization_stats_(config: DictConfig):
         config[typ].out_scaler_path = join(stats_dir, f'out_{typ}_scaler.joblib')
 
 
-def generate_wav_file(config: DictConfig, wav, out_wav_path, logger):
+def estimate_bit_depth(wav: np.ndarray) -> int:
     """
-    ビット深度を指定してファイル出力
+    wavformのビット深度を判定する。
+    16bitか32bit
+    16bitの最大値: 32767
+    32bitの最大値: 2147483647
     """
+    # 音量の最大値を取得
     max_gain = np.max(np.abs(wav))
-
-    # 学習データのビット震度を推定(8388608=2^24)
+    # 学習データのビット深度を推定(8388608=2^24)
     if max_gain > 8388608:
-        training_data_bit_depth = 32
-    else:
-        training_data_bit_depth = 16
+        return 32
+    return 16
 
-    # 出力ファイルのビット震度を指定
-    bit_depth = int(config.bit_depth)
-    if bit_depth not in (16, 32):
-        logger.warn("bit_depth can take '16' or '32'. This time render in 32bit int depth.")
 
-    # 16bit出力のとき
-    if bit_depth == 16:
-        limit_gain = 32767
-        # 16bitの音声を学習したと思われるときはそのまま出力
-        # 32bitで学習して16bit出力しようとしている場合は16bit小さくする。
-        if training_data_bit_depth == 32:
-            wav = wav / 65536
-        wav = wav.astype(np.int16)
-    # 32bit出力のとき
-    elif bit_depth == 32:
-        limit_gain = 2147483647
-        # 32bitの音声を学習したと思われるときはそのまま出力
-        # 16bitで学習して32bit出力しようとしている場合は16bit大きくする。
-        if training_data_bit_depth == 16:
-            wav = wav * 65536
-        wav = wav.astype(np.int32)
+def generate_wav_file(config: DictConfig, wav, out_wav_path):
+    """
+    ビット深度を指定してファイル出力(32bit float)
+    """
+    # 出力された音量をもとに、学習に使ったビット深度を推定
+    training_data_bit_depth = estimate_bit_depth(wav)
+
+    # 16bitで学習したモデルの時
+    if training_data_bit_depth == 16:
+        wav = wav / 32767
+    # 32bitで学習したモデルの時
+    elif training_data_bit_depth == 32:
+        wav = wav / 2147483647
     # なぜか16bitでも32bitでもないとき
     else:
-        raise ValueError('Unexpected Error')
+        raise ValueError('WAVのbit深度がよくわかりませんでした。')
 
     # 音量ノーマライズする場合
     if config.gain_normalize:
-        wav = wav * limit_gain / max_gain
-    # 音量ノーマライズしない場合、クリッピングしてたら警告
-    else:
-        if max_gain > limit_gain:
-            logger.warn("Output WAV file seems clipped")
+        wav = wav / np.max(np.abs(wav))
 
     # ファイル出力
+    wav = wav.astype(np.float32)
     wavfile.write(out_wav_path, rate=config.sample_rate, data=wav)
 
 
@@ -182,8 +203,8 @@ def synthesis(config, device, label_path,
         acoustic_pitch_indices,
         log_f0_conditioning)
 
-    # Waveform generation
-    generated_waveform = gen_waveform(
+    # Generate f0, mgc, bap, waveform
+    f0, mgc, bap, generated_waveform = gen_waveform(
         duration_modified_labels,
         acoustic_features,
         acoustic_binary_dict,
@@ -199,7 +220,7 @@ def synthesis(config, device, label_path,
         config.frame_period,
         config.acoustic.relative_f0)
 
-    return generated_waveform
+    return duration_modified_labels, f0, mgc, bap, generated_waveform
 
 
 def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None) -> None:
@@ -273,17 +294,19 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
     else:
         pass
     logger.info('Synthesize the wav file: %s', out_wav_path)
-    f0, mgc, bap, wav = synthesis(
+    duration_modified_labels, f0, mgc, bap, wav = synthesis(
         config, device, label_path,
         timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
         duration_model, duration_config, duration_in_scaler, duration_out_scaler,
         acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler)
-    logger.info('Synthesized the wav file: %s', out_wav_path)
 
     # サンプルレートとビット深度を指定してファイル出力
-    generate_wav_file(config, wav, out_wav_path, logger)
+    generate_wav_file(config, wav, out_wav_path)
+    logger.info('Synthesized the wav file: %s', out_wav_path)
 
     # f0 mgc bap のファイル出力
+    # with open(out_wav_path.replace('.wav', ".timing"), "wb") as f:
+    hts.write_textgrid(out_wav_path.replace('.wav', "_mod.lab"),  duration_modified_labels)
     with open(out_wav_path.replace('.wav', ".f0"), "wb") as f:
         f0.astype(np.float64).tofile(f)
     with open(out_wav_path.replace('.wav', ".mgc"), "wb") as f:
@@ -317,14 +340,16 @@ def main():
             input('Please input label file path\n>>> ').strip('"')
         out_wav_path = f'{splitext(label_path)[0]}.wav'
 
-    str_now = datetime.now().strftime('%Y%m%d%h%M%S')
-    out_wav_path = out_wav_path.replace('.wav', f'__{str_now}.wav')
     # configファイルのパスを分割する
     config_path, config_name = split(voicebank_config_yaml_path)
 
     # configファイルを読み取る
     initialize(config_path=relpath(config_path))
     config = compose(config_name=config_name, overrides=[f'+config_path={config_path}'])
+
+    # WAVファイル生成
+    str_now = datetime.now().strftime('%Y%m%d%h%M%S')
+    out_wav_path = out_wav_path.replace('.wav', f'__{str_now}.wav')
     hts2wav(config, label_path, out_wav_path)
 
 

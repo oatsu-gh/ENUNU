@@ -9,22 +9,15 @@
   - キャッシュフォルダでいいと思う。
 3. LABファイル→WAVファイル
 """
-import platform
-import winsound
 from datetime import datetime
-from os import chdir, getcwd, makedirs
-from os.path import relpath, splitdrive, splitext
-# from os.path import abspath, dirname, exists
-from subprocess import Popen
+from os import chdir, makedirs, startfile
+from os.path import splitext
 from sys import argv
 
 import utaupy as up
 from hts2wav import hts2wav
 from omegaconf import DictConfig, OmegaConf
-# from hydra.experimental import compose, initialize
 from utaupy.utils import hts2json, ustobj2songobj
-
-# from shlex import quote
 
 
 def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
@@ -41,7 +34,7 @@ def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
     return path_ust, voice_dir, cache_dir
 
 
-def utauplugin2hts(path_plugin, path_hts, path_table, strict_sinsy_style=False):
+def utauplugin2hts(path_plugin_in, path_hts_out, path_table, strict_sinsy_style=False):
     """
     USTじゃなくてUTAUプラグイン用に最適化する。
     ust2hts.py 中の ust2hts を改変して、
@@ -51,7 +44,7 @@ def utauplugin2hts(path_plugin, path_hts, path_table, strict_sinsy_style=False):
     table = up.table.load(path_table, encoding='utf-8')
 
     # プラグイン用一時ファイルを読み取る
-    plugin = up.utauplugin.load(path_plugin)
+    plugin = up.utauplugin.load(path_plugin_in)
 
     # [#PREV] や [#NEXT] が含まれているか判定
     prev_exists = not plugin.previous_note is None
@@ -66,13 +59,6 @@ def utauplugin2hts(path_plugin, path_hts, path_table, strict_sinsy_style=False):
     full_label = up.hts.HTSFullLabel()
     full_label.song = song
     full_label.fill_contexts_from_songobj()
-
-    # デバッグ用
-    # full_label.write(path_hts.replace('.lab', '途中.lab'),
-    #                  encoding='utf-8',
-    #                  strict_sinsy_style=strict_sinsy_style)
-    # hts2json(path_hts.replace('.lab', '途中.lab'),
-    #          path_hts.replace('.lab', '途中.json'))
 
     # [#PREV] と [#NEXT] を消す前の状態での休符周辺のコンテキストを調整する
     if prev_exists or next_exists:
@@ -98,7 +84,7 @@ def utauplugin2hts(path_plugin, path_hts, path_table, strict_sinsy_style=False):
 
     # ファイル出力
     s = '\n'.join(list(map(str, full_label)))
-    with open(path_hts, mode='w', encoding='utf-8') as f:
+    with open(path_hts_out, mode='w', encoding='utf-8') as f:
         f.write(s)
 
 
@@ -137,8 +123,7 @@ def main_as_plugin(path_plugin: str) -> str:
     hts2wav(cfg, path_lab, path_wav)
     print(f'{datetime.now()} : generated WAV ({path_wav})')
     # Windowsの時は音声を再生する。
-    if platform.system() == 'Windows':
-        winsound.PlaySound(path_wav, winsound.SND_FILENAME)
+    startfile(path_wav)
     return path_wav
 
 
@@ -212,7 +197,7 @@ def main(path: str):
 
 
 if __name__ == '__main__':
-    print('_____ξ ・ヮ・)ξ < ENUNU v0.x.x ________')
+    print('_____ξ ・ヮ・)ξ < ENUNU v0.2.0 ________')
     print(f'argv: {argv}')
     if len(argv) == 2:
         main(argv[1])

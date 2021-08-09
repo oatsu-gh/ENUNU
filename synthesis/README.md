@@ -1,2 +1,3 @@
-ust2hts は utaupy.utils.ust2hts に引っ越しました。
+# synthesis
 
+ENUNUで音声合成をする部分のソースコード
