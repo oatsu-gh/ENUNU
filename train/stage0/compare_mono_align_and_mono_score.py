@@ -35,7 +35,7 @@ def phoneme_is_ok(path_mono_align_lab, path_mono_score_lab):
             error_message = '\n'.join([
                 f'DB同梱のラベルと楽譜から生成したラベルの音素記号が一致しません。({basename(path_mono_align_lab)})',
                 f'  DB同梱のラベル  : {mono_align_phoneme}\t({path_mono_align_lab})',
-                f'  楽譜からのラベル: {mono_align_phoneme}\t({path_mono_align_lab})'
+                f'  楽譜からのラベル: {mono_score_phoneme}\t({path_mono_score_lab})'
             ])
             logging.error(error_message)
             return False

@@ -188,12 +188,12 @@ def split_full_label_long(full_label: HTSFullLabel) -> list:
     return result
 
 
-def split_label(label: Union[Label, HTSFullLabel], mode: str) -> List[Union[Label, HTSFullLabel]]:
+def split_label(label: Union[Label, HTSFullLabel], mode: str, middle_frequency: int = 3
+                ) -> List[Union[Label, HTSFullLabel]]:
     """
     ラベルを分割してリストにして返す。フルラベルとモノラベルを自動で使い分ける。
     mode: 'short' か 'long' のいずれか
     """
-    middle_frequency = 9
     if mode not in ('short', 'middle', 'long'):
         raise ValueError('Argument "mode" must be "short" or "long".')
 
@@ -254,6 +254,7 @@ def main(path_config_yaml):
         config = yaml.load(fy, Loader=yaml.FullLoader)
     out_dir = config['out_dir']
     mode = config['segmentation_mode']
+    middle_frequency = config['middle_frequency']
 
     full_score_round_files = natsorted(glob(f'{out_dir}/full_score_round/*.lab'))
     mono_score_round_files = natsorted(glob(f'{out_dir}/mono_score_round/*.lab'))

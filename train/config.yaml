@@ -37,9 +37,10 @@ db_root:                    singing_database
 ## How to segment LAB and WAV before training
 # Changing this config might help you avoid "SegmentationFault" on stage 1.
 # - long  : Devide full-label files at 'pau'-'pau' or 'pau'-'sil' phoneme pattern.
-# - middle: (under development)
-# - short : Devide at th start of each 'pau' phoneme.
+# - middle: Devide at the start of each <middle_frequency> 'pau's.
+# - short : Devide at the start of each 'pau' phoneme.
 segmentation_mode:          middle
+middle_frequency:           5
 
 
 ###########################################################
@@ -49,6 +50,7 @@ timelag_features:           defaults
 duration_features:          defaults
 acoustic_features:          static_deltadelta
 
+
 ###########################################################
 #          TRAINING SETTING  (STAGE 2 - STAGE 4)          #
 ###########################################################
@@ -57,8 +59,7 @@ acoustic_features:          static_deltadelta
 # To customize, put your config or change ones in
 # conf/train/{timelag,duration,acoustic}/ and
 # specify the config name below
-# NOTE: *_model: model definition, *_train: general train configs,
-# *_data:                   data configs (e.g., batch size)
+# NOTE: *_model: model definition, *_train: general train configs, *_data: data configs (e.g., batch size)
 
 timelag_model:              timelag_ffn
 timelag_train:              myconfig

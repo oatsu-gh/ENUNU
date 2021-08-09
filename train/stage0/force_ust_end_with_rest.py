@@ -21,7 +21,7 @@ def force_ust_files_end_with_rest(ust_dir):
     for path_ust in tqdm(ust_files):
         ust = up.ust.load(path_ust)
         if ust.notes[-1].lyric != 'R':
-            info_message = f'USTの末尾に休符がありません。修正をお勧めします。({path_ust})'
+            info_message = f'USTの末尾に休符がありません。({path_ust})'
             logging.info(info_message)
         ust.make_finalnote_R()
         ust.write(path_ust)

@@ -32,7 +32,7 @@ ground_truth_duration:  false
 # If not empty, try to search statisics in the directory
 stats_dir:              dump/unnamed/norm
 # If not empty, try to search models in the directory
-model_dir:              exp/unnamed_enunu_train_kit
+model_dir:              exp/unnamed_enunu_training_kit
 
 acoustic:
     question_path:      null
