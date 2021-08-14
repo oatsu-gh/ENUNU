@@ -12,7 +12,7 @@ from os.path import basename, dirname, exists, isdir, join
 from typing import List
 
 DEVICES = ['cu102', 'cu111']
-KEEP_LATEST_PACKAGES = ['pip', 'wheel', 'utaupy', 'nnmnkwii']
+KEEP_LATEST_PACKAGES = ['pip', 'setuptools', 'wheel', 'utaupy']
 REMOVE_LIST = ['__pycache__', '.mypy']
 
 
@@ -20,7 +20,8 @@ def pip_install_upgrade(python_exe: str, packages: List[str]):
     """
     pythonのパッケージを更新する
     """
-    args = [python_exe, '-m', 'pip', 'install', '--upgrade'] + packages
+    args = [python_exe, '-m', 'pip', 'install', '--upgrade',
+            '--no-warn-script-location'] + packages
     subprocess.run(args, check=True)
 
 
@@ -59,8 +60,8 @@ def create_install_txt(path_out: str, version: str, device: str):
     プラグインの各フォルダに install.txt を作成する。
     """
     s = '\n'.join(['type=editplugin',
-                   f'folder=ENUNU-{version}-{device}',
-                   f'contentsdir=ENUNU-{version}-{device}',
+                   f'folder=ENUNU-{version}+{device}',
+                   f'contentsdir=ENUNU-{version}+{device}',
                    'description=NNSVSモデルに歌ってもらうUTAUプラグイン'])
     with open(path_out, 'w') as f:
         f.write(s)
@@ -85,7 +86,7 @@ def main():
 
     # 既存フォルダを削除する
     for device in DEVICES:
-        old_dir = join('_release', f'ENUNU-{version}-{device}')
+        old_dir = join('_release', f'ENUNU-{version}+{device}')
         if exists(old_dir):
             shutil.rmtree(old_dir)
 
@@ -94,13 +95,20 @@ def main():
 
         # 配布物を入れるフォルダを新規作成する
         enunu_release_dir = join(
-            '_release', f'ENUNU-{version}-{device}', f'ENUNU-{version}-{device}'
+            '_release', f'ENUNU-{version}+{device}', f'ENUNU-{version}+{device}'
         )
         print(f'Making directory: {enunu_release_dir}')
         makedirs(enunu_release_dir)
 
+        # README をリリースフォルダにコピーする
+        print('Copying LICENSE and README and HISTORY')
+        shutil.copy2('./../LICENSE', join(enunu_release_dir, 'LICENSE.txt'))
+        shutil.copy2('./../README.md', join(enunu_release_dir, 'README.txt'))
+        shutil.copy2('./../README_English.md', join(enunu_release_dir, 'README_English.txt'))
+        shutil.copy2('./../HISTORY.md', join(enunu_release_dir, 'HISTORY.txt'))
+
         # utaupyとかを更新する
-        python_dir = f'python-3.8.10-embed-amd64-{device}'
+        python_dir = f'python-3.8.10-embed-amd64+{device}'
         python_exe = join(python_dir, 'python.exe')
         print(f'Upgrading packages of {python_dir} (this may take some minutes)')
         pip_install_upgrade(python_exe, KEEP_LATEST_PACKAGES)
@@ -132,6 +140,7 @@ def main():
         # install.txt を作る
         path_install_txt = join(dirname(enunu_release_dir), 'install.txt')
         create_install_txt(path_install_txt, version, device)
+
     print('\n----------------------------------------------')
 
 
