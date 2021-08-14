@@ -74,7 +74,7 @@ def maybe_set_normalization_stats_(config: DictConfig):
         config[typ].out_scaler_path = join(stats_dir, f'out_{typ}_scaler.joblib')
 
 
-def estimate_bit_depth(wav: np.ndarray) -> int:
+def estimate_bit_depth(wav: np.ndarray) -> str:
     """
     wavformのビット深度を判定する。
     16bitか32bit
@@ -85,8 +85,10 @@ def estimate_bit_depth(wav: np.ndarray) -> int:
     max_gain = np.max(np.abs(wav))
     # 学習データのビット深度を推定(8388608=2^24)
     if max_gain > 8388608:
-        return 32
-    return 16
+        return 'int32'
+    if max_gain > 8:
+        return 'int16'
+    return 'float'
 
 
 def generate_wav_file(config: DictConfig, wav, out_wav_path):
@@ -96,12 +98,15 @@ def generate_wav_file(config: DictConfig, wav, out_wav_path):
     # 出力された音量をもとに、学習に使ったビット深度を推定
     training_data_bit_depth = estimate_bit_depth(wav)
 
+    print(training_data_bit_depth)
     # 16bitで学習したモデルの時
-    if training_data_bit_depth == 16:
+    if training_data_bit_depth == 'int16':
         wav = wav / 32767
     # 32bitで学習したモデルの時
-    elif training_data_bit_depth == 32:
+    elif training_data_bit_depth == 'int32':
         wav = wav / 2147483647
+    elif training_data_bit_depth == 'float':
+        pass
     # なぜか16bitでも32bitでもないとき
     else:
         raise ValueError('WAVのbit深度がよくわかりませんでした。')
@@ -223,7 +228,7 @@ def synthesis(config, device, label_path,
     return duration_modified_labels, f0, mgc, bap, generated_waveform
 
 
-def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None) -> None:
+def hts2wav(config: DictConfig, label_path: str = None, out_wav_path: str = None) -> None:
     """
     configファイルから各種設定を取得し、labファイルをもとにWAVファイルを生成する。
 
@@ -291,36 +296,35 @@ def my_app(config: DictConfig, label_path: str = None, out_wav_path: str = None)
     # 出力するwavファイルの設定。
     if out_wav_path is None:
         out_wav_path = config.out_wav_path
-    else:
-        pass
+
+    # パラメータ推定
     logger.info('Synthesize the wav file: %s', out_wav_path)
-    duration_modified_labels, f0, mgc, bap, wav = synthesis(
+    duration_modified_labels, f0, sp, bap, wav = synthesis(
         config, device, label_path,
         timelag_model, timelag_config, timelag_in_scaler, timelag_out_scaler,
         duration_model, duration_config, duration_in_scaler, duration_out_scaler,
         acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler)
 
-    # サンプルレートとビット深度を指定してファイル出力
+    # 中間ファイル出力
+    print(type(duration_modified_labels))
+    with open(out_wav_path.replace('.wav', '_timing.lab'), 'wt') as f_lab:
+        lines = str(duration_modified_labels).splitlines()
+        s = ''
+        for line in lines:
+            t_start, t_end, context = line.split()
+            context = context[context.find('-') + 1: context.find('+')]
+            s += f'{t_start} {t_end} {context}\n'
+        f_lab.write(s)
+    with open(out_wav_path.replace('.wav', '.f0'), 'wb') as f_f0:
+        f0.astype(np.float64).tofile(f_f0)
+    with open(out_wav_path.replace('.wav', '.mgc'), 'wb') as f_mgc:
+        sp.astype(np.float64).tofile(f_mgc)
+    with open(out_wav_path.replace('.wav', '.bap'), 'wb') as f_bap:
+        bap.astype(np.float64).tofile(f_bap)
+    # サンプルレートとビット深度を指定してWAVファイル出力
     generate_wav_file(config, wav, out_wav_path)
+
     logger.info('Synthesized the wav file: %s', out_wav_path)
-
-    # f0 mgc bap のファイル出力
-    # with open(out_wav_path.replace('.wav', ".timing"), "wb") as f:
-    hts.write_textgrid(out_wav_path.replace('.wav', "_mod.lab"),  duration_modified_labels)
-    with open(out_wav_path.replace('.wav', ".f0"), "wb") as f:
-        f0.astype(np.float64).tofile(f)
-    with open(out_wav_path.replace('.wav', ".mgc"), "wb") as f:
-        mgc.astype(np.float64).tofile(f)
-    with open(out_wav_path.replace('.wav', ".bap"), "wb") as f:
-        bap.astype(np.float64).tofile(f)
-
-
-def hts2wav(config: DictConfig, label_path: str, out_wav_path: str):
-    """
-    パスを指定して音声合成を実施する。
-    ENUNU用にパスを指定しやすいようにwrapした。
-    """
-    my_app(config, label_path=label_path, out_wav_path=out_wav_path)
 
 
 def main():

@@ -9,9 +9,11 @@
   - キャッシュフォルダでいいと思う。
 3. LABファイル→WAVファイル
 """
+from copy import deepcopy
 from datetime import datetime
+# import logging
 from os import chdir, makedirs, startfile
-from os.path import splitext
+from os.path import basename, splitext
 from sys import argv
 
 import utaupy as up
@@ -34,7 +36,7 @@ def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
     return path_ust, voice_dir, cache_dir
 
 
-def utauplugin2hts(path_plugin_in, path_hts_out, path_table, strict_sinsy_style=False):
+def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None, strict_sinsy_style=False):
     """
     USTじゃなくてUTAUプラグイン用に最適化する。
     ust2hts.py 中の ust2hts を改変して、
@@ -84,8 +86,10 @@ def utauplugin2hts(path_plugin_in, path_hts_out, path_table, strict_sinsy_style=
 
     # ファイル出力
     s = '\n'.join(list(map(str, full_label)))
-    with open(path_hts_out, mode='w', encoding='utf-8') as f:
+    with open(path_full_out, mode='w', encoding='utf-8') as f:
         f.write(s)
+    if path_mono_out is not None:
+        full_label.as_mono().write(path_mono_out)
 
 
 def main_as_plugin(path_plugin: str) -> str:
@@ -96,34 +100,52 @@ def main_as_plugin(path_plugin: str) -> str:
     # UTAUの一時ファイルに書いてある設定を読み取って捨てる
     plugin = up.utauplugin.load(path_plugin)
     str_now = datetime.now().strftime('%Y%m%d%H%M%S')
-    path_ust, voice_dir, cache_dir = get_project_path(plugin)
-    del plugin
+    path_ust, voice_dir, _ = get_project_path(plugin)
 
     # カレントディレクトリを音源フォルダに変更する
     chdir(voice_dir)
     # configファイルを読み取る
     print(f'{datetime.now()} : reading enuconfig')
-    cfg = DictConfig(OmegaConf.load(f'{voice_dir}/enuconfig.yaml'))
+    config = DictConfig(OmegaConf.load(f'{voice_dir}/enuconfig.yaml'))
 
     # 入出力パスを設定する
-    path_lab = f'{cache_dir}/temp.lab'
-    path_json = f'{cache_dir}/temp.json'
-    path_wav = f'{splitext(path_ust)[0]}__{str_now}.wav'
+    out_dir = f'{splitext(path_ust)[0]}__{str_now}'
+    # 出力フォルダがなければつくる
+    makedirs(out_dir, exist_ok=True)
+    # 各種出力ファイルのパスを設定
+    songname = basename(out_dir)
+    path_full_score_lab = f'{out_dir}/{songname}_full_score.lab'
+    path_mono_score_lab = f'{out_dir}/{songname}_mono_score.lab'
+    path_json = f'{out_dir}/{songname}_full_score.json'
+    path_wav = f'{out_dir}/{songname}.wav'
+    path_ust_out = f'{out_dir}/{songname}.ust'
 
-    # キャッシュフォルダがなければつくる
-    makedirs(cache_dir, exist_ok=True)
+    # フルラベル生成
+    print(f'{datetime.now()} : converting TMP to LAB')
+    utauplugin2hts(
+        path_plugin,
+        config.table_path,
+        path_full_score_lab,
+        path_mono_out=path_mono_score_lab,
+        strict_sinsy_style=(not config.trained_for_enunu)
+    )
 
     # ファイル処理
-    strict_sinsy_style = not cfg.trained_for_enunu
-    print(f'{datetime.now()} : converting TMP to LAB')
-    utauplugin2hts(path_plugin, path_lab, cfg.table_path, strict_sinsy_style=strict_sinsy_style)
+    # 選択範囲のUSTを出力(musicxml用)
+    print(f'{datetime.now()} : exporting UST')
+    new_ust = deepcopy(plugin)
+    for note in new_ust.notes:
+        note.suppin()
+    new_ust.write(path_ust_out)
+
     print(f'{datetime.now()} : converting LAB to JSON')
-    hts2json(path_lab, path_json)
+    hts2json(path_full_score_lab, path_json)
     print(f'{datetime.now()} : converting LAB to WAV')
-    hts2wav(cfg, path_lab, path_wav)
-    print(f'{datetime.now()} : generated WAV ({path_wav})')
+    hts2wav(config, path_full_score_lab, path_wav)
+    print(f'{datetime.now()} : generating WAV ({path_wav})')
     # Windowsの時は音声を再生する。
     startfile(path_wav)
+
     return path_wav
 
 
@@ -187,23 +209,19 @@ def main(path: str):
     """
     入力ファイルによって処理を分岐する。
     """
-    if path.endswith('.bat'):
-        # main_as_engine(path)
-        print('未実装です。')
-    elif path.endswith('.tmp'):
+    # logging.basicConfig(level=logging.INFO)
+    if path.endswith('.tmp'):
         main_as_plugin(path)
     else:
-        raise ValueError('Input file must be BAT(engine) or TMP(plugin).')
+        raise ValueError('Input file must be TMP(plugin).')
 
 
 if __name__ == '__main__':
     print('_____ξ ・ヮ・)ξ < ENUNU v0.2.0 ________')
     print(f'argv: {argv}')
     if len(argv) == 2:
-        main(argv[1])
+        path_utauplugin = argv[1]
     elif len(argv) == 1:
-        path_utauplugin = input(
-            'Input file path of BAT(engine) or TMP(plugin)\n>>> '
-        ).strip('"')
-
-        main(path_utauplugin)
+        path_utauplugin = \
+            input('Input file path of TMP(plugin)\n>>> ').strip('"')
+    main(path_utauplugin)
