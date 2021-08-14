@@ -78,8 +78,8 @@ sil sil
 くぉ k w o
 グォ g w O
 ぐぉ g w o
+グヮ g w A
 ぐゎ g w a
-ぐゎ g w A
 ケ k E
 け k e
 ゲ g E
@@ -136,21 +136,16 @@ sil sil
 だ d a
 チ ch I
 ち ch i
-ヂ j I
 チェ ch E
 ちぇ ch e
-ヂェ j E
-ぢぇ j e
 チャ ch A
 ちゃ ch a
 ヂャ j A
 ぢゃ j a
 チュ ch U
 ちゅ ch u
-ヂュ j U
 チョ ch O
 ちょ ch o
-ヂョ j O
 ッ cl
 っ cl
 ツ ts U
@@ -344,8 +339,6 @@ sil sil
 テェ ty E
 てぃぇ ty e
 ティェ ty E
-ぢゃ j a
-ヂャ j A
 ぢ j i
 ヂ j I
 ぢゅ j u
