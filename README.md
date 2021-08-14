@@ -2,8 +2,6 @@
 
 NNSVS用歌声モデルをUTAU音源みたいに使えるようにするUTAUプラグイン
 
-UTAU plugin powered by NNSVS
-
 ## インストールと使い方の記事
 
 [UTAUでNNSVSモデルを使おう！（ENUNU）](https://note.com/crazy_utau/n/n45db22b33d2c)
@@ -39,20 +37,22 @@ UTAU plugin powered by NNSVS
 
 ---
 
+
+
 ## 開発環境
 
 - Windows 10
-- Python 3.8.6（3.9はPytorchが未対応）
-  - utaupy 1.10.0
-  - numpy 1.19.3（1.19.4 はWindowsのバグで動かない）
+- Python 3.8.10（3.9はPytorchが未対応）
+  - utaupy 1.13.2
+  - numpy 1.20.3（1.19.4 はWindowsのバグで動かない）
   - torch 1.7.0+cu101
   - nnsvs 開発バージョン
-  - nnmnkwii 開発バージョン
-- CUDA 10.1
+  - nnmnkwii
+- CUDA 11.1
 
 ## ENUNU向けUTAU音源フォルダの作り方
 
-通常のNNSVS用歌声モデルも使えますが、[ENUNU専用のレシピ](https://github.com/oatsu-gh/ENUNU/tree/main/nnsvs_recipe_for_enunu)を使ったほうがすこし安定すると思います。採譜時の音程チェック用に、再配布可のUTAU単独音音源の同梱をお勧めします。
+通常のNNSVS用歌声モデルも使えますが、[ENUNU専用のレシピ](https://github.com/oatsu-gh/ENUNU/tree/main/train)を使ったほうがすこし安定すると思います。採譜時の音程チェック用に、再配布可のUTAU単独音音源の同梱をお勧めします。
 
 ### 通常のモデルを使う場合
 
@@ -61,8 +61,6 @@ UTAU plugin powered by NNSVS
 ### ENUNU用のモデルを使う場合
 
 モデルのルートディレクトリに enuconfig.yaml を追加し、ENUNU用おふとんP歌声モデルなどを参考にして書き換えてください。`question_path` は学習に使ったものを指定し、同梱してください。`trained_for_enunu` は **`true`** としてください。
-
-
 
 ## ラベルファイルに関する備考
 
