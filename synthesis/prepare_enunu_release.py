@@ -11,7 +11,7 @@ from os import makedirs
 from os.path import basename, dirname, exists, isdir, join
 from typing import List
 
-DEVICES = ['cpu', 'cuda102', 'cuda111']
+DEVICES = ['cu102', 'cu111']
 KEEP_LATEST_PACKAGES = ['pip', 'wheel', 'utaupy', 'nnmnkwii']
 REMOVE_LIST = ['__pycache__', '.mypy']
 
@@ -59,8 +59,8 @@ def create_install_txt(path_out: str, version: str, device: str):
     プラグインの各フォルダに install.txt を作成する。
     """
     s = '\n'.join(['type=editplugin',
-                   f'folder=enunu-{version}-{device}',
-                   f'contentsdir=enunu-{version}-{device}',
+                   f'folder=ENUNU-{version}-{device}',
+                   f'contentsdir=ENUNU-{version}-{device}',
                    'description=NNSVSモデルに歌ってもらうUTAUプラグイン'])
     with open(path_out, 'w') as f:
         f.write(s)
@@ -70,7 +70,7 @@ def create_plugin_txt(path_out, version, device):
     """
     プラグインの各フォルダに plugin.txt を作成する。
     """
-    s = '\n'.join([f'name=ENUNU v{version} ({device.uppee()}) (&9)',
+    s = '\n'.join([f'name=ENUNU v{version} ({device}) (&9)',
                    r'execute=.\enunu.bat'])
     with open(path_out, 'w') as f:
         f.write(s)
@@ -84,12 +84,12 @@ def main():
     assert '.' in version
 
     # 既存フォルダを削除する
-    for device in ['cpu', 'cuda102', 'cuda111']:
+    for device in DEVICES:
         old_dir = join('_release', f'ENUNU-{version}-{device}')
         if exists(old_dir):
             shutil.rmtree(old_dir)
 
-    for device in ['cpu', 'cuda102', 'cuda111']:
+    for device in DEVICES:
         print('\n----------------------------------------------')
 
         # 配布物を入れるフォルダを新規作成する
@@ -100,7 +100,7 @@ def main():
         makedirs(enunu_release_dir)
 
         # utaupyとかを更新する
-        python_dir = f'python-3.8.9-embed-amd64-{device}'
+        python_dir = f'python-3.8.10-embed-amd64-{device}'
         python_exe = join(python_dir, 'python.exe')
         print(f'Upgrading packages of {python_dir} (this may take some minutes)')
         pip_install_upgrade(python_exe, KEEP_LATEST_PACKAGES)
