@@ -1,8 +1,6 @@
 # ENUNU
 
-UTAU plugin powered by NNSVS
-
-This software allows you to use the NNSVS-singing-model, like a UTAU VB.
+This software allows you to use NNSVS-singing-models like as UTAU-VBs.
 
 ## Attention
 
