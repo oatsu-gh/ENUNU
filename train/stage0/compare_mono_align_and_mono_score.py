@@ -8,16 +8,21 @@ Shirani さんのレシピでは fastdtw を使って、
 DB同梱のモノラベルをSinsy出力の音素と一致させる。
 """
 import logging
+import statistics
 from glob import glob
+from itertools import chain
 # from os import makedirs
 from os.path import basename
 from sys import argv
-from typing import Union
+from typing import List, Tuple, Union
 
 import utaupy as up
 import yaml
 from natsort import natsorted
 from tqdm import tqdm
+
+THRESHOLD = 250
+VOWELS = ('a', 'i', 'u', 'e', 'o', 'A', 'I', 'U', 'E', 'O', 'N')
 
 
 def phoneme_is_ok(path_mono_align_lab, path_mono_score_lab):
@@ -50,32 +55,130 @@ def force_start_with_zero(path_mono_align_lab):
     """
     mono_align_label = up.label.load(path_mono_align_lab)
     if mono_align_label[0].start != 0:
-        warning_message = 'DB同梱のラベルの最初の音素開始時刻が0ではありません。0に修正して処理を続行します。({})'.format(
-            basename(path_mono_align_lab))
+        warning_message = \
+            'DB同梱のラベルの最初の音素開始時刻が0ではありません。0に修正して処理を続行します。({})'.format(
+                basename(path_mono_align_lab))
         logging.warning(warning_message)
         mono_align_label[0].start = 0
         mono_align_label.write(path_mono_align_lab)
 
 
+def calc_median_mean_pstdev(mono_align_lab_files: List[str],
+                            mono_score_lab_files: List[str],
+                            vowels=VOWELS
+                            ) -> Tuple[int, int, int]:
+    """
+    ラベルと楽譜の母音のdurationの差の、統計値を求める。
+    median: 中央値
+    mean  : 平均値
+    sigma : 標準偏差
+    """
+    # 全ラベルファイルを読み取る
+    mono_align_label_objects = [up.label.load(path) for path in mono_align_lab_files]
+    mono_score_label_objects = [up.label.load(path) for path in mono_score_lab_files]
+    # Labelのリストを展開してPhonemeのリストにする
+    mono_align_phonemes = list(chain.from_iterable(mono_align_label_objects))
+    mono_score_phonemes = list(chain.from_iterable(mono_score_label_objects))
+    # 母音以外を削除し、直後が休符なものも削除
+    mono_align_phonemes = [
+        phoneme for i, phoneme in enumerate(mono_align_phonemes[:-1])
+        if (phoneme.symbol in vowels) and mono_align_phonemes[i + 1] not in ['cl', 'pau']
+    ]
+    mono_score_phonemes = [
+        phoneme for i, phoneme in enumerate(mono_score_phonemes[:-1])
+        if (phoneme.symbol in vowels) and mono_score_phonemes[i + 1] not in ['cl', 'pau']
+    ]
+    # durationの差の一覧
+    duration_differences = [
+        ph_align.duration - ph_score.duration
+        for ph_align, ph_score in zip(mono_align_phonemes, mono_score_phonemes)
+    ]
+    # 中央値
+    return (int(statistics.median(duration_differences)),
+            int(statistics.mean(duration_differences)),
+            int(statistics.pstdev(duration_differences)))
+
+
 def offet_is_ok(path_mono_align_lab,
                 path_mono_score_lab,
-                threshold: Union[int, float] = 1) -> bool:
+                mean_100ns: Union[int, float],
+                stdev_100ns: Union[int, float],
+                mode: str
+                ) -> bool:
     """
     最初の音素の長さを比較して、閾値以上ずれていたらエラーを返す。
+    threshold_ms の目安: 300ms-600ms (5sigma-10sigma)
     """
+    k = {'strict': 5, 'medium': 6, 'lenient': 7}[mode]
+    # TODO: medianとか使うようにする
     # 単位換算して100nsにする
-    threshold_100ns = threshold * 10000000
+    upper_threshold = mean_100ns + k * stdev_100ns
+    lower_threshold = mean_100ns - k * stdev_100ns
     # labファイルを読み込む
     mono_align_label = up.label.load(path_mono_align_lab)
     mono_score_label = up.label.load(path_mono_score_lab)
     # 設定した閾値以上差があるか調べる
-    if abs(mono_align_label[0].end - mono_score_label[0].end) >= threshold_100ns:
-        warning_message = 'DB同梱のラベルと楽譜から生成したラベルの歌いだしの位置が {} 秒以上異なります。({})'.format(
-            threshold, basename(path_mono_align_lab))
+    duration_difference = mono_align_label[0].duration - mono_score_label[0].duration
+    if not lower_threshold < duration_difference < upper_threshold:
+        warning_message = \
+            'DB同梱のラベルの前奏が楽譜より {} ミリ秒以上早いか、{} ミリ秒以上長いです。({} ms) ({})'.format(
+                round(lower_threshold / 10000),
+                round(upper_threshold / 10000),
+                round(duration_difference / 10000),
+                basename(path_mono_align_lab)
+            )
         logging.warning(warning_message)
         return False
     # 問題なければTrueを返す
     return True
+
+
+def vowel_durations_are_ok(path_mono_align_lab,
+                           path_mono_score_lab,
+                           mean_100ns: Union[int, float],
+                           stdev_100ns: Union[int, float],
+                           mode: str,
+                           vowels=VOWELS) -> bool:
+    """
+    母音の長さを比較して、楽譜中で歌詞ずれが起きていないかチェックする。
+    閾値以上ずれていたら警告する。
+    MIDIを自動生成するようなときに音素誤認識して、
+    誤ったMIDIができてずれてることがあるのでその対策。
+
+    threshold_ms の目安:  250 (5sigma-6sigma)
+    - 優しめ: 6sigma
+    - ふつう: 5sigma
+    - 厳しめ: 4sigma
+    """
+    k = {'strict': 4, 'medium': 5, 'lenient': 6}[mode]
+    # 単位換算して100nsにする
+    upper_threshold = mean_100ns + k * stdev_100ns
+    lower_threshold = mean_100ns - k * stdev_100ns
+    # labファイルを読み込む
+    mono_align_label = up.label.load(path_mono_align_lab)
+    mono_score_label = up.label.load(path_mono_score_lab)
+    ok_flag = True
+    # 休符を比較
+    for i, (phoneme_align, phoneme_score) in enumerate(zip(mono_align_label[:-1], mono_score_label[:-1])):
+        duration_difference = phoneme_align.duration - phoneme_score.duration
+        if mono_align_label[i + 1].symbol in ['cl', 'pau']:
+            continue
+        if phoneme_align.symbol in vowels and not lower_threshold < duration_difference < upper_threshold:
+            warning_message = '\n'.join([
+                'DB同梱のラベルが楽譜から生成したラベルの母音より {} ミリ秒以上短いか、{} ミリ秒以上長いです。平均値 ± {}σ の範囲外です。({} ms) ({})'.format(
+                    round(lower_threshold / 10000),
+                    round(upper_threshold / 10000),
+                    k,
+                    round(duration_difference / 10000),
+                    basename(path_mono_align_lab)),
+                f'  直前の音素: {mono_align_label[i-1].symbol}',
+                f'  DB同梱のラベル  : {phoneme_align}\t({phoneme_align.duration / 10000} ms)\t{path_mono_align_lab}',
+                f'  楽譜からのラベル: {phoneme_score}\t({phoneme_score.duration / 10000} ms)\t{path_mono_score_lab}',
+                f'  直後の音素: {mono_align_label[i+1].symbol}'
+            ])
+            logging.warning(warning_message)
+            ok_flag = False
+    return ok_flag
 
 
 def main(path_config_yaml):
@@ -99,12 +202,27 @@ def main(path_config_yaml):
     for path_mono_align, path_mono_score in zip(tqdm(mono_align_files), mono_score_files):
         if not phoneme_is_ok(path_mono_align, path_mono_score):
             invalid_basenames.append(basename(path_mono_align))
+
+    # 母音のdurationの統計値を取得
+    print('Calculating median, mean and stdev of duration difference')
+    _, mean_100ns, stdev_100ns = calc_median_mean_pstdev(
+        mono_align_files, mono_score_files)
+
+    # 前奏の長さを点検
+    print('Checking first pau duration')
     for path_mono_align, path_mono_score in zip(tqdm(mono_align_files), mono_score_files):
-        if not offet_is_ok(path_mono_align, path_mono_score):
+        if not offet_is_ok(path_mono_align, path_mono_score,
+                           mean_100ns, stdev_100ns, mode='medium'):
             invalid_basenames.append(basename(path_mono_align))
     if len(invalid_basenames) > 0:
         raise Exception('DBから生成したラベルと楽譜から生成したラベルに不整合があります。'
                         'ログファイルを参照して修正して下さい。')
+
+    # 音素長をチェックする。
+    print('Comparing mono-align-LAB durations and mono-score-LAB durations')
+    for path_mono_align, path_mono_score in zip(tqdm(mono_align_files), mono_score_files):
+        vowel_durations_are_ok(path_mono_align, path_mono_score,
+                               mean_100ns, stdev_100ns, mode='strict')
 
 
 if __name__ == '__main__':
