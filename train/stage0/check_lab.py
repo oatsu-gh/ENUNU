@@ -44,16 +44,17 @@ def repair_too_short_phoneme(lab_dir, threshold=5) -> None:
     for path_mono in tqdm(mono_lab_files):
         # LABファイルを読み取る
         label = up.label.load(path_mono)
-        # 短い音素が一つでもある場合
+        # 短い音素が一つもない場合はスルー
         if all(phoneme.duration >= threshold_100ns for phoneme in label):
             continue
         # 短い音素が連続しても不具合が起こらないように逆向きにループする
-        logging.info('短い音素を修正します。: %s' % path_mono)
         if label[0].duration < threshold_100ns:
-            raise ValueError('最初の音素が短いです。修正できません。')
+            raise ValueError(f'最初の音素が短いです。修正できません。: {label[0]} ({path_mono})')
         for i, phoneme in enumerate(reversed(label)):
             # 発声時間が閾値より短い場合
             if phoneme.duration < threshold_100ns:
+                info_message = f'短い音素を修正します。: {phoneme} ({path_mono})'
+                logging.info(info_message)
                 # 閾値との差分を計算する。この分だけずらす。
                 delta_t = threshold_100ns - phoneme.duration
                 # 対象の音素の開始時刻をずらして、発生時間を伸ばす。
