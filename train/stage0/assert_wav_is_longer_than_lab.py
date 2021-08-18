@@ -45,7 +45,7 @@ def compare_wav_files_and_lab_files(wav_dir_in, lab_dir_in):
     lab_files = natsorted(glob(f'{lab_dir_in}/*.lab'))
     for path_wav, path_lab in zip(tqdm(wav_files), lab_files):
         if not wav_is_longer_than_lab(path_wav, path_lab):
-            warning_message = f'WAV is shorter than LAB ({path_wav}) ({path_lab})'
+            warning_message = f'WAV is shorter than LAB or score. ({path_wav}) ({path_lab})'
             warning(warning_message)
 
 
