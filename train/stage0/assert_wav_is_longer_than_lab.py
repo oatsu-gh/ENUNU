@@ -61,8 +61,12 @@ def main(path_config_yaml):
     # DBに同梱されていたLABファイルを丸める
     wav_dir_in = join(out_dir, 'wav')
     full_align_dir_in = join(out_dir, 'full_align_round')
+    full_score_dir_in = join(out_dir, 'full_score_round')
     # 点検する
+    print('Comparing length of LAB and WAV')
     compare_wav_files_and_lab_files(wav_dir_in, full_align_dir_in)
+    print('Comparing length of score and WAV')
+    compare_wav_files_and_lab_files(wav_dir_in, full_score_dir_in)
 
 
 if __name__ == '__main__':

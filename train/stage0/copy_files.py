@@ -44,7 +44,7 @@ def main(path_config_yaml):
     with open(path_config_yaml, 'r') as fy:
         config = yaml.load(fy, Loader=yaml.FullLoader)
     # 歌唱DBのパスを取得
-    db_root = expanduser(config['db_root']).strip('"')
+    db_root = expanduser(config['stage0']['db_root']).strip('"')
     # ファイルのコピー先を取得
     out_dir = config['out_dir'].strip('"')
 

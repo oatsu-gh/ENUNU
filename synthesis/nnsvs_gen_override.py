@@ -109,7 +109,7 @@ def gen_waveform(labels,
                                             aperiodicity.astype(np.float64),
                                             sample_rate, frame_period)
 
-    # 音量を小さくする
+    # 音量を小さくする(音割れ防止)
     # TODO: ここのかける定数をいい感じにする
     spectrogram *= 0.000000001
     sp = pyworld.code_spectral_envelope(spectrogram, sample_rate, 60)

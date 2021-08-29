@@ -18,25 +18,36 @@ from utaupy.hts import HTSFullLabel
 from utaupy.label import Label
 
 
-def all_phonemes_are_rest(label) -> bool:
+def all_phonemes_are_rest(label: Union[Label, HTSFullLabel]) -> bool:
     """
-    フルラベル中に休符しかないかどうか判定
+    フルラベルまたはモノラベル中に休符しかないかどうか判定
     """
-    rests = ('pau', 'sil')
-    # モノラベルのとき
-    if isinstance(label, Label):
-        for phoneme in label:
-            if phoneme.symbol not in rests:
-                return False
-        return True
-    # フルラベルのとき
-    if isinstance(label, HTSFullLabel):
-        for oneline in label:
-            if oneline.phoneme.identity not in rests:
-                return False
-        return True
-    # フルラベルでもモノラベルでもないとき
-    raise ValueError("Argument 'label' must be Label object or HTSFullLabel object.")
+    rests = set(['pau', 'sil'])
+    # 全部の音素が休符であるか否か
+    result = all(phoneme.symbol in rests for phoneme in label)
+    return result
+
+# def all_phonemes_are_rest_old(label: Union[Label, HTSFullLabel]) -> bool:
+#     """
+#     フルラベル中に休符しかないかどうか判定(旧実装)
+#     """
+#     rests = set(['pau', 'sil'])
+#     # モノラベルのとき
+#     if isinstance(label, Label):
+#         for phoneme in label:
+#             if phoneme.symbol not in rests:
+#                 return False
+#         return True
+#     # フルラベルのとき
+#     if isinstance(label, HTSFullLabel):
+#         for oneline in label:
+#             if oneline.phoneme.identity not in rests:
+#                 return False
+#         return True
+#     # フルラベルでもモノラベルでもないとき
+#     raise ValueError("Argument 'label' must be Label object or HTSFullLabel object.")
+
+
 
 
 def split_mono_label_short(label: Label) -> List[Label]:
@@ -188,7 +199,7 @@ def split_full_label_long(full_label: HTSFullLabel) -> list:
     return result
 
 
-def split_label(label: Union[Label, HTSFullLabel], mode: str, middle_frequency: int = 3
+def split_label(label: Union[Label, HTSFullLabel], mode: str, middle_frequency: int
                 ) -> List[Union[Label, HTSFullLabel]]:
     """
     ラベルを分割してリストにして返す。フルラベルとモノラベルを自動で使い分ける。
@@ -214,29 +225,6 @@ def split_label(label: Union[Label, HTSFullLabel], mode: str, middle_frequency: 
     return result
 
 
-def test_full(mode):
-    """
-    単独のフルラベルを休符で分割する。
-    """
-    path_in = input('path_in: ')
-    label = up.hts.load(path_in)
-    split_result = split_label(label, mode=mode)
-    for i, full_label in enumerate(split_result):
-        path_out = path_in.replace('.lab', f'_split_{str(i).zfill(6)}.lab')
-        full_label.write(path_out, strict_sinsy_style=False)
-
-
-def test_mono():
-    """
-    単独のモノラベルを休符で分割する。
-    """
-    path_in = input('path_in: ')
-    split_result = split_mono_label_long(up.label.load(path_in))
-    for i, mono_label in enumerate(split_result):
-        path_out = path_in.replace('.lab', f'_split_{str(i).zfill(6)}.lab')
-        mono_label.write(path_out)
-
-
 def remove_zensou_and_kousou(path_lab):
     """
     長すぎてGPUメモリを食いつぶすような音素を除去(前奏、間奏、後奏とか)
@@ -253,8 +241,8 @@ def main(path_config_yaml):
     with open(path_config_yaml, 'r') as fy:
         config = yaml.load(fy, Loader=yaml.FullLoader)
     out_dir = config['out_dir']
-    mode = config['segmentation_mode']
-    middle_frequency = config['middle_frequency']
+    mode = config['stage0']['segmentation_mode']
+    middle_frequency = config['stage0']['middle_frequency']
 
     full_score_round_files = natsorted(glob(f'{out_dir}/full_score_round/*.lab'))
     mono_score_round_files = natsorted(glob(f'{out_dir}/mono_score_round/*.lab'))
@@ -270,7 +258,7 @@ def main(path_config_yaml):
     for path in tqdm(full_score_round_files):
         songname = splitext(basename(path))[0]
         label = up.hts.load(path)
-        for idx, segment in enumerate(split_label(label, mode)):
+        for idx, segment in enumerate(split_label(label, mode, middle_frequency)):
             path_out = f'{out_dir}/full_score_round_seg/{songname}_seg{idx}.lab'
             segment.write(path_out, strict_sinsy_style=False)
 
@@ -278,7 +266,7 @@ def main(path_config_yaml):
     for path in tqdm(full_align_round_files):
         songname = splitext(basename(path))[0]
         label = up.hts.load(path)
-        for idx, segment in enumerate(split_label(label, mode)):
+        for idx, segment in enumerate(split_label(label, mode, middle_frequency)):
             path_out = f'{out_dir}/full_align_round_seg/{songname}_seg{idx}.lab'
             segment.write(path_out, strict_sinsy_style=False)
 
@@ -286,7 +274,7 @@ def main(path_config_yaml):
     for path in tqdm(mono_score_round_files):
         songname = splitext(basename(path))[0]
         label = up.label.load(path)
-        for idx, segment in enumerate(split_label(label, mode)):
+        for idx, segment in enumerate(split_label(label, mode, middle_frequency)):
             path_out = f'{out_dir}/mono_score_round_seg/{songname}_seg{idx}.lab'
             segment.write(path_out)
 
@@ -295,7 +283,7 @@ def main(path_config_yaml):
     for path in tqdm(mono_align_round_files):
         songname = splitext(basename(path))[0]
         label = up.label.load(path)
-        for idx, segment in enumerate(split_label(label, mode)):
+        for idx, segment in enumerate(split_label(label, mode, middle_frequency)):
             path_out = f'{out_dir}/mono_align_round_seg/{songname}_seg{idx}.lab'
             segment.write(path_out)
 

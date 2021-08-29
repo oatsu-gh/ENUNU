@@ -21,8 +21,7 @@ import yaml
 from natsort import natsorted
 from tqdm import tqdm
 
-THRESHOLD = 250
-VOWELS = ('a', 'i', 'u', 'e', 'o', 'A', 'I', 'U', 'E', 'O', 'N')
+VOWELS = {'a', 'i', 'u', 'e', 'o', 'A', 'I', 'U', 'E', 'O', 'N'}
 
 
 def phoneme_is_ok(path_mono_align_lab, path_mono_score_lab):
@@ -31,10 +30,7 @@ def phoneme_is_ok(path_mono_align_lab, path_mono_score_lab):
     """
     mono_align_label = up.label.load(path_mono_align_lab)
     mono_score_label = up.label.load(path_mono_score_lab)
-    # assert len(mono_label) == len(sinsy_mono), \
-    #     'DB同梱のラベル({}, {})と楽譜から生成したラベル({}, {})の音素数が一致しません。'.format(
-    #     len(mono_label), path_mono_label, len(sinsy_mono), path_sinsy_mono
-    # )
+    # 全音素記号が一致したらTrueを返す
     for mono_align_phoneme, mono_score_phoneme in zip(mono_align_label, mono_score_label):
         if mono_align_phoneme.symbol != mono_score_phoneme.symbol:
             error_message = '\n'.join([
@@ -44,7 +40,14 @@ def phoneme_is_ok(path_mono_align_lab, path_mono_score_lab):
             ])
             logging.error(error_message)
             return False
-    # 全音素記号が一致したらTrueを返す
+    if len(mono_align_label) != len(mono_score_label):
+        error_message = '\n'.join([
+            f'DB同梱のラベルと楽譜から生成したラベルの音素数が一致しません。({basename(path_mono_align_lab)})',
+            f'  DB同梱ラベルの音素数    : {len(mono_align_label)}\t({path_mono_align_lab})',
+            f'  楽譜からのラベルの音素数: {len(mono_score_label)}\t({path_mono_score_lab})'
+        ])
+        logging.error(error_message)
+        return False
     return True
 
 
@@ -109,8 +112,7 @@ def offet_is_ok(path_mono_align_lab,
     最初の音素の長さを比較して、閾値以上ずれていたらエラーを返す。
     threshold_ms の目安: 300ms-600ms (5sigma-10sigma)
     """
-    k = {'strict': 5, 'medium': 6, 'lenient': 7}[mode]
-    # TODO: medianとか使うようにする
+    k = {'strict': 5, 'medium': 6, 'lenient': 7}.get(mode, 6)
     # 単位換算して100nsにする
     upper_threshold = mean_100ns + k * stdev_100ns
     lower_threshold = mean_100ns - k * stdev_100ns
@@ -150,7 +152,7 @@ def vowel_durations_are_ok(path_mono_align_lab,
     - ふつう: 5sigma
     - 厳しめ: 4sigma
     """
-    k = {'strict': 4, 'medium': 5, 'lenient': 6}[mode]
+    k = {'strict': 4, 'medium': 5, 'lenient': 6}.get(mode, 6)
     # 単位換算して100nsにする
     upper_threshold = mean_100ns + k * stdev_100ns
     lower_threshold = mean_100ns - k * stdev_100ns
@@ -190,6 +192,7 @@ def main(path_config_yaml):
     out_dir = config['out_dir']
     mono_align_files = natsorted(glob(f'{out_dir}/mono_align_round/*.lab'))
     mono_score_files = natsorted(glob(f'{out_dir}/mono_score_round/*.lab'))
+    duration_check_mode = config['stage0']['vowel_duration_check']
 
     # mono_align_labの最初の音素が時刻0から始まるようにする。
     print('Overwriting mono-align-LAB so that it starts with zero.')
@@ -212,7 +215,7 @@ def main(path_config_yaml):
     print('Checking first pau duration')
     for path_mono_align, path_mono_score in zip(tqdm(mono_align_files), mono_score_files):
         if not offet_is_ok(path_mono_align, path_mono_score,
-                           mean_100ns, stdev_100ns, mode='medium'):
+                           mean_100ns, stdev_100ns, mode=duration_check_mode):
             invalid_basenames.append(basename(path_mono_align))
     if len(invalid_basenames) > 0:
         raise Exception('DBから生成したラベルと楽譜から生成したラベルに不整合があります。'
@@ -222,7 +225,7 @@ def main(path_config_yaml):
     print('Comparing mono-align-LAB durations and mono-score-LAB durations')
     for path_mono_align, path_mono_score in zip(tqdm(mono_align_files), mono_score_files):
         vowel_durations_are_ok(path_mono_align, path_mono_score,
-                               mean_100ns, stdev_100ns, mode='strict')
+                               mean_100ns, stdev_100ns, mode=duration_check_mode)
 
 
 if __name__ == '__main__':
