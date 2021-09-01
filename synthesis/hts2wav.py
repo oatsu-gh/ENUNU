@@ -97,8 +97,8 @@ def generate_wav_file(config: DictConfig, wav, out_wav_path):
     """
     # 出力された音量をもとに、学習に使ったビット深度を推定
     training_data_bit_depth = estimate_bit_depth(wav)
+    # print(training_data_bit_depth)
 
-    print(training_data_bit_depth)
     # 16bitで学習したモデルの時
     if training_data_bit_depth == 'int16':
         wav = wav / 32767
