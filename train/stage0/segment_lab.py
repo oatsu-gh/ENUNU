@@ -22,7 +22,7 @@ def all_phonemes_are_rest(label: Union[Label, HTSFullLabel]) -> bool:
     """
     フルラベルまたはモノラベル中に休符しかないかどうか判定
     """
-    rests = set(['pau', 'sil'])
+    rests = {'pau', 'sil'}
     # 全部の音素が休符であるか否か
     result = all(phoneme.symbol in rests for phoneme in label)
     return result
