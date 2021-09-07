@@ -3,7 +3,7 @@ nnsvs_root:                 nnsvs
 ## Singer's name
 spk:                        unnamed
 ## exp tag(for managing experiments)
-tag:                        enunu_training_kit
+tag:                        enunu_train
 
 ## Output directory
 # All the generated labels, intermediate files, and segmented wav files
@@ -16,11 +16,8 @@ exclude_songs:              []
 ## Lyric -> Phonemes table
 ## HTS-style question used for extracting musical/linguistic context from musicxml files
 table_path:                 dic/kana2phonemes_002_oto2lab.table
-question_path:              hed/jp_qst_crazy_mono_013_enunu_221D.hed
+question_path:              hed/jp_qst_crazy_mono_014_enunu_mdn_206D.hed
 
-# Time-lag constraints to filter outliers
-timelag_allowed_range:      [-20, 19]
-timelag_allowed_range_rest: [-40, 39]
 # Audio sampling rate
 # [CAUTION] Changing sample_rate may affect the dimension number of acoustic features.
 # DO NOT CHANGE this unless you know the relationship between the dim of bap and sample_rate.
@@ -30,17 +27,21 @@ sample_rate:                44100
 ###########################################################
 #          DATA PREPARATION SETTING    (STAGE 0)          #
 ###########################################################
+stage0:
+    ## Directory of unzipped singing voice database
+    db_root:                singing_database
+    ### How to segment LAB and WAV before training
+    # Changing this config might help you avoid "SegmentationFault" on stage 1.
+    # Choices are [null, long, middle, short] (middle is recommended)
+    # If "never",  LAB is not devided.
+    # If "long",   LAB is devided at "pau"-"pau" or "pau""-"sil phoneme pattern.
+    # If "middle", LAB is devided at the start of each <middle_frequency> "pau"s.
+    # If "short",  LAB is devided at the start of each "pau" phoneme.
+    segmentation_mode:      middle
+    middle_frequency:       3
 
-## Directory of unzipped singing voice database
-db_root:                    singing_database
-
-## How to segment LAB and WAV before training
-# Changing this config might help you avoid "SegmentationFault" on stage 1.
-# - long  : Devide full-label files at 'pau'-'pau' or 'pau'-'sil' phoneme pattern.
-# - middle: Devide at the start of each <middle_frequency> 'pau's.
-# - short : Devide at the start of each 'pau' phoneme.
-segmentation_mode:          middle
-middle_frequency:           5
+    # Choices are [strict, middle, lenient]
+    vowel_duration_check:   middle
 
 
 ###########################################################
@@ -49,6 +50,8 @@ middle_frequency:           5
 timelag_features:           defaults
 duration_features:          defaults
 acoustic_features:          static_deltadelta
+# optional arg of "aperiodicity = pyworld.d4c()" in nnsvs/data/data_source.py (line 155)
+# d4c_threshold:            0.58
 
 
 ###########################################################
@@ -61,21 +64,22 @@ acoustic_features:          static_deltadelta
 # specify the config name below
 # NOTE: *_model: model definition, *_train: general train configs, *_data: data configs (e.g., batch size)
 
-timelag_model:              timelag_ffn
-timelag_train:              myconfig
-timelag_data:               myconfig
+acoustic_model:             acoustic_mdn
+acoustic_train:             myconfig_mdn
+acoustic_data:              myconfig_mdn
 
-duration_model:             duration_lstm
-duration_train:             myconfig
-duration_data:              myconfig
+duration_model:             duration_mdn
+duration_train:             myconfig_mdn
+duration_data:              myconfig_mdn
 
-acoustic_model:             acoustic_conv
-acoustic_train:             myconfig
-acoustic_data:              myconfig
+timelag_model:              timelag_mdn
+timelag_train:              myconfig_mdn
+timelag_data:               myconfig_mdn
 
 # Pretrained model dir (leave empty to disable)
-# pretrained_expdir:        exp/unnamed_enunu_training_kit
+# pretrained_expdir:          exp/ritsu_enunu_rmdn_0831
 pretrained_expdir:
+
 
 ###########################################################
 #         SYNTHESIS SETTING             (STAGE 6)         #
