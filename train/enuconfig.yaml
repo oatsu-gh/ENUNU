@@ -5,9 +5,6 @@
 trained_for_enunu:      true
 # Table (lyric -> phonemes) file path.
 table_path:             dic/kana2phonemes_002_oto2lab.table
-# bit depth of output wav file.
-# 32 or 16 (recommended:32)
-bit_depth:              32
 
 defaults:
     - hydra/job_logging: colorlog
@@ -21,7 +18,7 @@ gain_normalize:         false
 
 # How was the model trained.
 frame_period:           5
-question_path:          hed/jp_qst_crazy_mono_013_enunu_221D.hed
+question_path:          hed/jp_qst_crazy_mono_014_enunu_mdn_206D.hed
 log_f0_conditioning:    true
 
 # Use ground truth duration or not
@@ -32,7 +29,7 @@ ground_truth_duration:  false
 # If not empty, try to search statisics in the directory
 stats_dir:              dump/unnamed/norm
 # If not empty, try to search models in the directory
-model_dir:              exp/unnamed_enunu_training_kit
+model_dir:              exp/unnamed_enunu_train
 
 acoustic:
     question_path:      null
@@ -55,5 +52,5 @@ timelag:
     checkpoint:         best_loss.pth
     in_scaler_path:     null
     out_scaler_path:    null
-    allowed_range:      [-20, 19]
-    allowed_range_rest: [-40, 39]
+    allowed_range:      [-150, 150]
+    allowed_range_rest: [-150, 250]
