@@ -52,16 +52,16 @@ def copy_scaler(singer, release_dir):
         copy2(path_scaler, f'{release_dir}/{path_scaler}')
 
 
-def copy_model(singer, name_exp, release_dir):
+def copy_model(singer, exp_name, release_dir):
     """
-    name_exp: 試験のID
+    exp_name: 試験のID
     """
-    name_exp = singer + '_' + name_exp
-    makedirs(f'{release_dir}/exp/{name_exp}/acoustic', exist_ok=True)
-    makedirs(f'{release_dir}/exp/{name_exp}/duration', exist_ok=True)
-    makedirs(f'{release_dir}/exp/{name_exp}/timelag', exist_ok=True)
-    list_path_model = glob(f'exp/{name_exp}/*/*.pth')
-    list_path_model += glob(f'exp/{name_exp}/*/model.yaml')
+    exp_name = singer + '_' + exp_name
+    makedirs(f'{release_dir}/exp/{exp_name}/acoustic', exist_ok=True)
+    makedirs(f'{release_dir}/exp/{exp_name}/duration', exist_ok=True)
+    makedirs(f'{release_dir}/exp/{exp_name}/timelag', exist_ok=True)
+    list_path_model = glob(f'exp/{exp_name}/*/*.pth')
+    list_path_model += glob(f'exp/{exp_name}/*/model.yaml')
 
     print('copying model')
     for path_model in tqdm(list_path_model):
