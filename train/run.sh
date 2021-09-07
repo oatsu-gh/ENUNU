@@ -82,6 +82,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     echo "#  stage 1: Feature generation           #"
     echo "#                                        #"
     echo "##########################################"
+    rm -rf $dumpdir
     . $NNSVS_COMMON_ROOT/feature_generation.sh
     echo ""
 fi
@@ -134,18 +135,18 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     echo ""
 fi
 
-
-# Synthesis wav files
-if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
-    echo "##########################################"
-    echo "#                                        #"
-    echo "#  stage 6: Waveform synthesis           #"
-    echo "#                                        #"
-    echo "##########################################"
-    . $NNSVS_COMMON_ROOT/synthesis.sh
-    echo ""
-fi
-
+#
+# # Synthesis wav files
+# if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
+#     echo "##########################################"
+#     echo "#                                        #"
+#     echo "#  stage 6: Waveform synthesis           #"
+#     echo "#                                        #"
+#     echo "##########################################"
+#     . $NNSVS_COMMON_ROOT/synthesis.sh
+#     echo ""
+# fi
+#
 
 # Copy the models to release directory
 if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
