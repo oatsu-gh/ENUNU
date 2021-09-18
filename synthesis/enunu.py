@@ -18,9 +18,14 @@ from sys import argv
 from tempfile import mkdtemp
 
 import utaupy as up
-from hts2wav import hts2wav
 from omegaconf import DictConfig, OmegaConf
 from utaupy.utils import hts2json, ustobj2songobj
+
+try:
+    from hts2wav import hts2wav
+except ModuleNotFoundError:
+    from install_torch import pip_install_torch
+    pip_install_torch(join('.', 'python-3.8.10-embed-amd64', 'python.exe'))
 
 
 def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
