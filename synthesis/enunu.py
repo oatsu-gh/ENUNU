@@ -13,7 +13,7 @@ from copy import deepcopy
 from datetime import datetime
 # import logging
 from os import chdir, makedirs, startfile
-from os.path import join, splitext
+from os.path import exists, join, splitext
 from sys import argv
 from tempfile import mkdtemp
 
@@ -38,7 +38,8 @@ def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
     return path_ust, voice_dir, cache_dir
 
 
-def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None, strict_sinsy_style=False):
+def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None,
+                   strict_sinsy_style=False):
     """
     USTじゃなくてUTAUプラグイン用に最適化する。
     ust2hts.py 中の ust2hts を改変して、
@@ -101,23 +102,29 @@ def main_as_plugin(path_plugin: str) -> str:
     print(f'{datetime.now()} : reading setting in ust')
     # UTAUの一時ファイルに書いてある設定を読み取って捨てる
     plugin = up.utauplugin.load(path_plugin)
-    str_now = datetime.now().strftime('%Y%m%d%H%M%S')
     path_ust, voice_dir, _ = get_project_path(plugin)
+
+    path_enuconfig = join(voice_dir, 'enuconfig.yaml')
+    if not exists(path_enuconfig):
+        raise Exception(
+            '音源フォルダに enuconfig.yaml が見つかりません。'
+            'UTAUの音源設定でENUNU用モデルを指定してください。'
+        )
 
     # カレントディレクトリを音源フォルダに変更する
     chdir(voice_dir)
     # configファイルを読み取る
     print(f'{datetime.now()} : reading enuconfig')
-    config = DictConfig(OmegaConf.load(join(voice_dir, 'enuconfig.yaml')))
+    config = DictConfig(OmegaConf.load(path_enuconfig))
 
     # 入出力パスを設定する
     if path_ust is not None:
-        songname = f'{splitext(path_ust)[0]}__{str_now}'
+        songname = f"{splitext(path_ust)[0]}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
         out_dir = songname
     # USTが未保存の場合
     else:
         print('USTが保存されていないので一時フォルダにWAV出力します。')
-        songname = f'temp__{str_now}'
+        songname = f"temp__{datetime.now().strftime('%Y%m%d%H%M%S')}"
         out_dir = mkdtemp(prefix='enunu')
 
     # 出力フォルダがなければつくる
