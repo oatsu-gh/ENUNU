@@ -42,6 +42,7 @@ import numpy as np
 import torch
 from hydra.experimental import compose, initialize
 from nnmnkwii.io import hts
+from nnsvs.bin.synthesis import maybe_set_normalization_stats_
 from nnsvs.gen import (postprocess_duration, predict_acoustic,
                        predict_duration, predict_timelag)
 from nnsvs.logger import getLogger
@@ -61,17 +62,6 @@ def maybe_set_checkpoints_(config: DictConfig):
             config[typ].checkpoint = join(model_dir, typ, 'best_loss.pth')
         else:
             config[typ].checkpoint = join(model_dir, typ, config[typ].checkpoint)
-
-
-def maybe_set_normalization_stats_(config: DictConfig):
-    """
-    configファイルを参考に、使用する *_scaler.joblib ファイルを設定する。
-    """
-    stats_dir = config.stats_dir
-    for typ in ('timelag', 'duration', 'acoustic'):
-        # I/O path of scalar file for each model
-        config[typ].in_scaler_path = join(stats_dir, f'in_{typ}_scaler.joblib')
-        config[typ].out_scaler_path = join(stats_dir, f'out_{typ}_scaler.joblib')
 
 
 def estimate_bit_depth(wav: np.ndarray) -> str:
@@ -306,7 +296,6 @@ def hts2wav(config: DictConfig, label_path: str = None, out_wav_path: str = None
         acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler)
 
     # 中間ファイル出力
-    print(type(duration_modified_labels))
     with open(out_wav_path.replace('.wav', '_timing.lab'), 'wt') as f_lab:
         lines = str(duration_modified_labels).splitlines()
         s = ''
