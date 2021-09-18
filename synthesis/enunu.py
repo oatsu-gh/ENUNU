@@ -13,8 +13,9 @@ from copy import deepcopy
 from datetime import datetime
 # import logging
 from os import chdir, makedirs, startfile
-from os.path import basename, splitext
+from os.path import join, splitext
 from sys import argv
+from tempfile import mkdtemp
 
 import utaupy as up
 from hts2wav import hts2wav
@@ -26,12 +27,13 @@ def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
     """
     キャッシュパスとプロジェクトパスを取得する。
     """
+    setting = utauplugin.setting
     # ustのパス
-    path_ust = utauplugin.setting['Project']
+    path_ust = setting.get('Project')
     # 音源フォルダ
-    voice_dir = utauplugin.setting['VoiceDir']
+    voice_dir = setting['VoiceDir']
     # 音声キャッシュのフォルダ(LABとJSONを設置する)
-    cache_dir = utauplugin.setting['CacheDir']
+    cache_dir = setting['CacheDir']
 
     return path_ust, voice_dir, cache_dir
 
@@ -106,19 +108,27 @@ def main_as_plugin(path_plugin: str) -> str:
     chdir(voice_dir)
     # configファイルを読み取る
     print(f'{datetime.now()} : reading enuconfig')
-    config = DictConfig(OmegaConf.load(f'{voice_dir}/enuconfig.yaml'))
+    config = DictConfig(OmegaConf.load(join(voice_dir, 'enuconfig.yaml')))
 
     # 入出力パスを設定する
-    out_dir = f'{splitext(path_ust)[0]}__{str_now}'
+    if path_ust is not None:
+        songname = f'{splitext(path_ust)[0]}__{str_now}'
+        out_dir = songname
+    # USTが未保存の場合
+    else:
+        print('USTが保存されていないので一時フォルダにWAV出力します。')
+        songname = f'temp__{str_now}'
+        out_dir = mkdtemp(prefix='enunu')
+
     # 出力フォルダがなければつくる
     makedirs(out_dir, exist_ok=True)
+
     # 各種出力ファイルのパスを設定
-    songname = basename(out_dir)
-    path_full_score_lab = f'{out_dir}/{songname}_full_score.lab'
-    path_mono_score_lab = f'{out_dir}/{songname}_mono_score.lab'
-    path_json = f'{out_dir}/{songname}_full_score.json'
-    path_wav = f'{out_dir}/{songname}.wav'
-    path_ust_out = f'{out_dir}/{songname}.ust'
+    path_full_score_lab = join(out_dir, f'{songname}_full_score.lab')
+    path_mono_score_lab = join(out_dir, f'{songname}_mono_score.lab')
+    path_json = join(out_dir, f'{songname}_full_score.json')
+    path_wav = join(out_dir, f'{songname}.wav')
+    path_ust_out = join(out_dir, f'{songname}.ust')
 
     # フルラベル生成
     print(f'{datetime.now()} : converting TMP to LAB')
@@ -149,62 +159,6 @@ def main_as_plugin(path_plugin: str) -> str:
     return path_wav
 
 
-# def main_as_engine(path_tempbat: str) -> str:
-#     """
-#     UtauPluginオブジェクトから音声ファイルを作る
-#     """
-#     # temp.bat から ustファイルを生成する。
-#     print(f'{datetime.now()} : converting BAT to UST')
-#     temp_dir = dirname(abspath(path_tempbat))
-#     path_ust = f'{temp_dir}/temp_enunu.ust'
-#     path_lab = f'{temp_dir}/temp_enunu.lab'
-#     path_json = f'{temp_dir}/temp_enunu.json'
-#     bat2ust(path_tempbat, path_ust)
-#
-#     # 生成したustファイルから情報を取得して捨てる
-#     print(f'{datetime.now()} : reading setting in ust')
-#     ust = up.ust.load(path_ust)
-#     voice_dir = ust.setting['VoiceDir']
-#     path_wav = abspath(ust.setting['OutFile'])
-#     del ust
-#
-#     # 使用するモデルの設定を取得する
-#     print(f'{datetime.now()} : reading enuconfig')
-#     enuconfig_name = 'enuconfig'
-#     print(getcwd())
-#     # ドライブが違うとrelpathが使えないので、カレントディレクトリを変更する
-#     print(f'changed cwd :  {getcwd()} -> {voice_dir}')
-#     chdir(voice_dir)
-#
-#     print(getcwd())
-#     # configファイルを読み取る
-#     print('voice_dir:', voice_dir)
-#     print(exists(voice_dir))
-#     print('voice_dir(rel):', relpath(voice_dir))
-#     print(exists(relpath(voice_dir)))
-#     initialize(config_path=relpath(voice_dir, getcwd()))
-#     cfg = compose(config_name=enuconfig_name, overrides=[f'+config_path="{relpath(voice_dir)}"'])
-#
-#     # 変換の設定
-#     path_table = f'{voice_dir}/{cfg.table_path}'
-#     strict_sinsy_style = not cfg.trained_for_enunu
-#     # ファイル処理
-#     print(f'{datetime.now()} : converting UST to LAB')
-#     ust2hts(path_ust, path_lab, path_table, strict_sinsy_style=strict_sinsy_style)
-#     print(f'{datetime.now()} : converting LAB to JSON')
-#     hts2json(path_lab, path_json)
-#     print(f'{datetime.now()} : converting LAB to WAV')
-#     hts2wav(cfg, path_lab, path_wav)
-#     print(f'{datetime.now()} : generated WAV ({path_wav})')
-#
-#     # 一時ファイルを消す
-#     remove(path_ust)
-#     remove(path_lab)
-#     remove(path_json)
-#
-#     return path_wav
-
-
 def main(path: str):
     """
     入力ファイルによって処理を分岐する。
@@ -217,7 +171,7 @@ def main(path: str):
 
 
 if __name__ == '__main__':
-    print('_____ξ ・ヮ・)ξ < ENUNU v0.2.0 ________')
+    print('_____ξ ・ヮ・)ξ < ENUNU v0.2.1 ________')
     print(f'argv: {argv}')
     if len(argv) == 2:
         path_utauplugin = argv[1]
