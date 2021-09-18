@@ -11,7 +11,6 @@ from os import makedirs
 from os.path import basename, dirname, exists, isdir, join
 from typing import List
 
-DEVICES = ['cu102', 'cu111']
 KEEP_LATEST_PACKAGES = ['pip', 'setuptools', 'wheel', 'utaupy']
 REMOVE_LIST = ['__pycache__', '.mypy']
 
@@ -55,23 +54,23 @@ def create_enunu_bat(path_out: str, python_exe: str):
         f.write(s)
 
 
-def create_install_txt(path_out: str, version: str, device: str):
+def create_install_txt(path_out: str, version: str):
     """
     プラグインの各フォルダに install.txt を作成する。
     """
     s = '\n'.join(['type=editplugin',
-                   f'folder=ENUNU-{version}+{device}',
-                   f'contentsdir=ENUNU-{version}+{device}',
+                   f'folder=ENUNU-{version}',
+                   f'contentsdir=ENUNU-{version}',
                    'description=NNSVSモデルに歌ってもらうUTAUプラグイン'])
     with open(path_out, 'w') as f:
         f.write(s)
 
 
-def create_plugin_txt(path_out, version, device):
+def create_plugin_txt(path_out, version):
     """
     プラグインの各フォルダに plugin.txt を作成する。
     """
-    s = '\n'.join([f'name=ENUNU v{version} ({device}) (&9)',
+    s = '\n'.join([f'name=ENUNU v{version} (&9)',
                    r'execute=.\enunu.bat'])
     with open(path_out, 'w') as f:
         f.write(s)
@@ -85,61 +84,57 @@ def main():
     assert '.' in version
 
     # 既存フォルダを削除する
-    for device in DEVICES:
-        old_dir = join('_release', f'ENUNU-{version}+{device}')
-        if exists(old_dir):
-            shutil.rmtree(old_dir)
+    old_dir = join('_release', f'ENUNU-{version}')
+    if exists(old_dir):
+        shutil.rmtree(old_dir)
 
-    for device in DEVICES:
-        print('\n----------------------------------------------')
+    print('\n----------------------------------------------')
 
-        # 配布物を入れるフォルダを新規作成する
-        enunu_release_dir = join(
-            '_release', f'ENUNU-{version}+{device}', f'ENUNU-{version}+{device}'
-        )
-        print(f'Making directory: {enunu_release_dir}')
-        makedirs(enunu_release_dir)
+    # 配布物を入れるフォルダを新規作成する
+    enunu_release_dir = join('_release', f'ENUNU-{version}', f'ENUNU-{version}')
+    print(f'Making directory: {enunu_release_dir}')
+    makedirs(enunu_release_dir)
 
-        # README をリリースフォルダにコピーする
-        print('Copying LICENSE and README and HISTORY')
-        shutil.copy2('./../LICENSE', join(enunu_release_dir, 'LICENSE.txt'))
-        shutil.copy2('./../README.md', join(enunu_release_dir, 'README.txt'))
-        shutil.copy2('./../README_English.md', join(enunu_release_dir, 'README_English.txt'))
-        shutil.copy2('./../HISTORY.md', join(enunu_release_dir, 'HISTORY.txt'))
+    # README をリリースフォルダにコピーする
+    print('Copying LICENSE and README and HISTORY')
+    shutil.copy2('./../LICENSE', join(enunu_release_dir, 'LICENSE.txt'))
+    shutil.copy2('./../README.md', join(enunu_release_dir, 'README.txt'))
+    shutil.copy2('./../README_English.md', join(enunu_release_dir, 'README_English.txt'))
+    shutil.copy2('./../HISTORY.md', join(enunu_release_dir, 'HISTORY.txt'))
 
-        # utaupyとかを更新する
-        python_dir = f'python-3.8.10-embed-amd64+{device}'
-        python_exe = join(python_dir, 'python.exe')
-        print(f'Upgrading packages of {python_dir} (this may take some minutes)')
-        pip_install_upgrade(python_exe, KEEP_LATEST_PACKAGES)
-        print()
+    # utaupyとかを更新する
+    python_dir = 'python-3.8.10-embed-amd64'
+    python_exe = join(python_dir, 'python.exe')
+    print(f'Upgrading packages of {python_dir} (this may take some minutes)')
+    pip_install_upgrade(python_exe, KEEP_LATEST_PACKAGES)
+    print()
 
-        # Pythonの実行ファイルをコピーする
-        print(f'Copying {python_dir} -> {join(enunu_release_dir, python_dir)}')
-        shutil.copytree(python_dir, join(enunu_release_dir, python_dir))
+    # Pythonの実行ファイルをコピーする
+    print(f'Copying {python_dir} -> {join(enunu_release_dir, python_dir)}')
+    shutil.copytree(python_dir, join(enunu_release_dir, python_dir))
 
-        # キャッシュファイルを削除する
-        print('Removing cache')
-        remove_cache_files(enunu_release_dir, REMOVE_LIST)
+    # キャッシュファイルを削除する
+    print('Removing cache')
+    remove_cache_files(enunu_release_dir, REMOVE_LIST)
 
-        # enunu.py と hts2wav.py と nnsvs_gen_override.py をコピーする
-        print('Copying python scripts')
-        shutil.copy2('enunu.py', join(enunu_release_dir, 'enunu.py'))
-        shutil.copy2('hts2wav.py', join(enunu_release_dir, python_dir, 'hts2wav.py'))
-        shutil.copy2('nnsvs_gen_override.py', join(
-            enunu_release_dir, python_dir, 'nnsvs_gen_override.py'))
+    # enunu.py と hts2wav.py と nnsvs_gen_override.py をコピーする
+    print('Copying python scripts')
+    shutil.copy2('enunu.py', join(enunu_release_dir))
+    shutil.copy2('hts2wav.py', join(enunu_release_dir, python_dir))
+    shutil.copy2('install_torch.py', join(enunu_release_dir, python_dir))
+    shutil.copy2('nnsvs_gen_override.py', join(enunu_release_dir, python_dir))
 
-        # enunu.bat をリリースフォルダに作成
-        print('Creating enunu.bat')
-        create_enunu_bat(join(enunu_release_dir, 'enunu.bat'),  python_exe)
+    # enunu.bat をリリースフォルダに作成
+    print('Creating enunu.bat')
+    create_enunu_bat(join(enunu_release_dir, 'enunu.bat'),  python_exe)
 
-        # plugin.txt をリリースフォルダに作成
-        print('Creating plugin.txt')
-        create_plugin_txt(join(enunu_release_dir, 'plugin.txt'), version, device)
+    # plugin.txt をリリースフォルダに作成
+    print('Creating plugin.txt')
+    create_plugin_txt(join(enunu_release_dir, 'plugin.txt'), version)
 
-        # install.txt を作る
-        path_install_txt = join(dirname(enunu_release_dir), 'install.txt')
-        create_install_txt(path_install_txt, version, device)
+    # install.txt を作る
+    path_install_txt = join(dirname(enunu_release_dir), 'install.txt')
+    create_install_txt(path_install_txt, version)
 
     print('\n----------------------------------------------')
 

@@ -11,7 +11,6 @@
 """
 from copy import deepcopy
 from datetime import datetime
-# import logging
 from os import chdir, makedirs, startfile
 from os.path import exists, join, splitext
 from sys import argv
@@ -24,9 +23,15 @@ from utaupy.utils import hts2json, ustobj2songobj
 try:
     from hts2wav import hts2wav
 except ModuleNotFoundError:
+    print('\n----------------------------------------------------------')
+    print('初回起動ですね。')
+    print('PC環境に合わせてPyTorchを自動インストールします。')
+    print('インストール完了までしばらくお待ちください。')
     from install_torch import pip_install_torch
     pip_install_torch(join('.', 'python-3.8.10-embed-amd64', 'python.exe'))
-
+    print('インストール成功しました。歌声合成を始めます。')
+    print('----------------------------------------------------------\n')
+    from hts2wav import hts2wav
 
 def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
     """
@@ -183,7 +188,7 @@ def main(path: str):
 
 
 if __name__ == '__main__':
-    print('_____ξ ・ヮ・)ξ < ENUNU v0.2.1 ________')
+    print('_____ξ ・ヮ・)ξ < ENUNU v0.2.2 ________')
     print(f'argv: {argv}')
     if len(argv) == 2:
         path_utauplugin = argv[1]
