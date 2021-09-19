@@ -16,7 +16,7 @@ function xrun () {
 }
 
 # use embed python executional file
-alias python="python-3.8.10-embed-amd64/python"
+# alias python="python-3.8.10-embed-amd64/python"
 
 script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 
