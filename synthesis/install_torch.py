@@ -72,8 +72,13 @@ def pip_install_torch(python_exe):
     """
     python.exe -m pip install torch torchaudio torchvision
     """
-    nvcc_v_result = nvcc_v()
-    packages = get_pytorch_package_list(nvcc_v_result)
+    # CUDAのインストール状況を調べて、対応するPyTorchのバージョンを取得
+    try:
+        packages = get_pytorch_package_list(nvcc_v())
+    # NVIDIA製GPU非搭載でnvccコマンドが見つからない場合はCPU向けパッケージを選択
+    except FileNotFoundError:
+        packages = get_pytorch_package_list('cpu')
+    # Pytorchをインストールする。
     command = [python_exe, '-m', 'pip', 'install'] + packages + ['-f', PYTORCH_STABLE_URL]
     print('command:', command)
     subprocess.run(command, check=True)
