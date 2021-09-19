@@ -129,7 +129,7 @@ def main_as_plugin(path_plugin: str) -> str:
     if not exists(path_enuconfig):
         raise Exception(
             '音源フォルダに enuconfig.yaml が見つかりません。'
-            'UTAUの音源設定でENUNU用モデルを指定してください。'
+            'UTAU音源選択でENUNU用モデルを指定してください。'
         )
 
     # カレントディレクトリを音源フォルダに変更する
@@ -146,7 +146,7 @@ def main_as_plugin(path_plugin: str) -> str:
     else:
         print('USTが保存されていないので一時フォルダにWAV出力します。')
         songname = f"temp__{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        out_dir = mkdtemp(prefix='enunu')
+        out_dir = mkdtemp(prefix='enunu-')
 
     # 出力フォルダがなければつくる
     makedirs(out_dir, exist_ok=True)
