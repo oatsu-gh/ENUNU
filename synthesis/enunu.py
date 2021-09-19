@@ -33,7 +33,8 @@ except ModuleNotFoundError:
     print('----------------------------------------------------------')
     print('インストール成功しました。歌声合成を始めます。')
     print('----------------------------------------------------------\n')
-    from hts2wav import hts2wav
+    from hts2wav import hts2wav  # pylint: disable=ungrouped-imports
+
 
 def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
     """
@@ -68,7 +69,7 @@ def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None
 
     # 歌詞が無いか空白のノートを休符にする。
     for note in plugin.notes:
-        if note.lyric.strip(' 　') = '':
+        if note.lyric.strip(' 　') == '':
             note.lyric = 'R'
 
     # [#PREV] や [#NEXT] が含まれているか判定
@@ -172,7 +173,11 @@ def main_as_plugin(path_plugin: str) -> str:
     print(f'{datetime.now()} : exporting UST')
     new_ust = deepcopy(plugin)
     for note in new_ust.notes:
+        # 基本情報以外を削除
         note.suppin()
+        # 歌詞がないノートを休符にする
+        if note.lyric.strip(' 　') == '':
+            note.lyric = 'R'
     new_ust.write(path_ust_out)
 
     print(f'{datetime.now()} : converting LAB to JSON')
