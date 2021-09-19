@@ -57,11 +57,19 @@ def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None
     ust2hts.py 中の ust2hts を改変して、
     [#PREV] と [#NEXT] に対応させている。
     """
+    # プラグイン用一時ファイルを読み取る
+    plugin = up.utauplugin.load(path_plugin_in)
     # 変換テーブルを読み取る
     table = up.table.load(path_table, encoding='utf-8')
 
-    # プラグイン用一時ファイルを読み取る
-    plugin = up.utauplugin.load(path_plugin_in)
+    # 2ノート以上選択されているかチェックする
+    if len(plugin.notes) < 2:
+        raise Exception('ENUNU requires at least 2 notes. / ENUNUを使うときは2ノート以上選択してください。')
+
+    # 歌詞が無いか空白のノートを休符にする。
+    for note in plugin.notes:
+        if note.lyric.strip(' 　') = '':
+            note.lyric = 'R'
 
     # [#PREV] や [#NEXT] が含まれているか判定
     prev_exists = not plugin.previous_note is None
@@ -112,7 +120,7 @@ def main_as_plugin(path_plugin: str) -> str:
     UtauPluginオブジェクトから音声ファイルを作る
     """
     print(f'{datetime.now()} : reading setting in ust')
-    # UTAUの一時ファイルに書いてある設定を読み取って捨てる
+    # UTAUの一時ファイルに書いてある設定を読み取る
     plugin = up.utauplugin.load(path_plugin)
     path_ust, voice_dir, _ = get_project_path(plugin)
 
@@ -190,7 +198,7 @@ def main(path: str):
 
 
 if __name__ == '__main__':
-    print('_____ξ ・ヮ・)ξ < ENUNU v0.2.2 ________')
+    print('_____ξ ・ヮ・)ξ < ENUNU v0.2.3 ________')
     print(f'argv: {argv}')
     if len(argv) == 2:
         path_utauplugin = argv[1]
