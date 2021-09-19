@@ -27,8 +27,10 @@ except ModuleNotFoundError:
     print('初回起動ですね。')
     print('PC環境に合わせてPyTorchを自動インストールします。')
     print('インストール完了までしばらくお待ちください。')
+    print('----------------------------------------------------------')
     from install_torch import pip_install_torch
     pip_install_torch(join('.', 'python-3.8.10-embed-amd64', 'python.exe'))
+    print('----------------------------------------------------------')
     print('インストール成功しました。歌声合成を始めます。')
     print('----------------------------------------------------------\n')
     from hts2wav import hts2wav
