@@ -53,8 +53,7 @@ def repair_too_short_phoneme(lab_dir, threshold=5) -> None:
         for i, phoneme in enumerate(reversed(label)):
             # 発声時間が閾値より短い場合
             if phoneme.duration < threshold_100ns:
-                info_message = f'短い音素を修正します。: {phoneme} ({path_mono})'
-                logging.info(info_message)
+                logging.info('短い音素を修正します。: %s (%s)', phoneme, path_mono)
                 # 閾値との差分を計算する。この分だけずらす。
                 delta_t = threshold_100ns - phoneme.duration
                 # 対象の音素の開始時刻をずらして、発生時間を伸ばす。
