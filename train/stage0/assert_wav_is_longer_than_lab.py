@@ -4,7 +4,6 @@
 WAVファイルが full_align_lab より長いことを確認する。
 """
 from sys import argv
-import sys
 import warnings
 from glob import glob
 from logging import warning
