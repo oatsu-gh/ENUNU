@@ -28,16 +28,16 @@ import subprocess
 PYTORCH_STABLE_URL = 'https://download.pytorch.org/whl/torch_stable.html'
 PYTORCH_PACKAGES_DICT = {
     # CUDA 11
-    'release 11.5': ['torch==1.9.0+cu111', 'torchvision==0.10.0+cu111', 'torchaudio==0.9.0'],
-    'release 11.4': ['torch==1.9.0+cu111', 'torchvision==0.10.0+cu111', 'torchaudio==0.9.0'],
-    'release 11.3': ['torch==1.9.0+cu111', 'torchvision==0.10.0+cu111', 'torchaudio==0.9.0'],
-    'release 11.2': ['torch==1.9.0+cu111', 'torchvision==0.10.0+cu111', 'torchaudio==0.9.0'],
-    'release 11.1': ['torch==1.9.0+cu111', 'torchvision==0.10.0+cu111', 'torchaudio==0.9.0'],
-    'release 11.0': ['torch==1.9.0+cu111', 'torchvision==0.10.0+cu111', 'torchaudio==0.9.0'],
+    'release 11.5': ['torch==1.9.1+cu111', 'torchvision==0.10.1+cu111', 'torchaudio==0.9.1'],
+    'release 11.4': ['torch==1.9.1+cu111', 'torchvision==0.10.1+cu111', 'torchaudio==0.9.1'],
+    'release 11.3': ['torch==1.9.1+cu111', 'torchvision==0.10.1+cu111', 'torchaudio==0.9.1'],
+    'release 11.2': ['torch==1.9.1+cu111', 'torchvision==0.10.1+cu111', 'torchaudio==0.9.1'],
+    'release 11.1': ['torch==1.9.1+cu111', 'torchvision==0.10.1+cu111', 'torchaudio==0.9.1'],
+    'release 11.0': ['torch==1.9.1+cu111', 'torchvision==0.10.1+cu111', 'torchaudio==0.9.1'],
     # CUDA 10
-    'release 10.2': ['torch==1.9.0+cu102', 'torchvision==0.9.0+cu102', 'torchaudio==0.8.0'],
-    'release 10.1': ['torch==1.9.0+cu102', 'torchvision==0.9.0+cu102', 'torchaudio==0.8.0'],
-    'release 10.0': ['torch==1.9.0+cu102', 'torchvision==0.9.0+cu102', 'torchaudio==0.8.0'],
+    'release 10.2': ['torch==1.9.1+cu102', 'torchvision==0.10.1+cu102', 'torchaudio==0.9.1'],
+    'release 10.1': ['torch==1.9.1+cu102', 'torchvision==0.10.1+cu102', 'torchaudio==0.9.1'],
+    'release 10.0': ['torch==1.9.1+cu102', 'torchvision==0.10.1+cu102', 'torchaudio==0.9.1'],
     # CUDA 9
     'release 9.2': ['torch==1.7.1+cu92', 'torchvision==0.8.2+cu92', 'torchaudio==0.7.2'],
     'release 9.1': ['torch==1.7.1+cu92', 'torchvision==0.8.2+cu92', 'torchaudio==0.7.2'],
