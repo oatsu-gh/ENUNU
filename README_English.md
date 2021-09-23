@@ -40,16 +40,16 @@ Following contents are for developers.
 
 
 
-## 開発環境
+## Development Environment
 
 - Windows 10
-- Python 3.8.6
-  - utaupy 1.10.0
-  - numpy 1.19.3（do not use 1.19.4）
+- Python 3.8
+  - utaupy 1.14.1
+  - numpy 1.21.2（do not use 1.19.4）
   - torch 1.7.0+cu101
   - nnsvs (develepment version)
   - nnmnkwii (develepment version)
-- CUDA 10.1
+- CUDA 11.0
 
 ## How to Create the UTAU Instrument Folder for ENUNU
 
