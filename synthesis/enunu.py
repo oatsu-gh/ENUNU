@@ -12,7 +12,7 @@
 from copy import deepcopy
 from datetime import datetime
 from os import chdir, makedirs, startfile
-from os.path import exists, join, splitext
+from os.path import basename, dirname, exists, join, splitext
 from sys import argv
 from tempfile import mkdtemp
 
@@ -140,8 +140,8 @@ def main_as_plugin(path_plugin: str) -> str:
 
     # 入出力パスを設定する
     if path_ust is not None:
-        songname = f"{splitext(path_ust)[0]}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        out_dir = songname
+        songname = f"{splitext(basename(path_ust))[0]}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        out_dir = join(dirname(path_ust), songname)
     # USTが未保存の場合
     else:
         print('USTが保存されていないので一時フォルダにWAV出力します。')
@@ -203,7 +203,7 @@ def main(path: str):
 
 
 if __name__ == '__main__':
-    print('_____ξ ・ヮ・)ξ < ENUNU v0.2.3 ________')
+    print('_____ξ ・ヮ・)ξ < ENUNU v0.2.4 ________')
     print(f'argv: {argv}')
     if len(argv) == 2:
         path_utauplugin = argv[1]
