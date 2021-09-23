@@ -23,7 +23,7 @@ from utaupy.utils import hts2json, ustobj2songobj
 try:
     from hts2wav import hts2wav
 except ModuleNotFoundError:
-    print('\n----------------------------------------------------------')
+    print('----------------------------------------------------------')
     print('初回起動ですね。')
     print('PC環境に合わせてPyTorchを自動インストールします。')
     print('インストール完了までしばらくお待ちください。')
