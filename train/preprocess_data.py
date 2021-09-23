@@ -7,7 +7,7 @@ import logging
 from sys import argv
 
 from stage0 import (assert_wav_is_longer_than_lab, check_lab,
-                    check_lab_after_segmentation,
+                    check_lab_after_segmentation, check_wav,
                     compare_mono_align_and_mono_score, copy_files,
                     copy_mono_time_to_full, finalize_lab,
                     force_ust_end_with_rest, full2mono, generate_train_list,
@@ -28,7 +28,8 @@ def main(path_config_yaml):
     copy_files.main(path_config_yaml)
     # mono_align (labフォルダのファイル) の中の音素の発生時刻が負でないか点検する。
     check_lab.main(path_config_yaml)
-
+    # wavファイルのフォーマットが適切か点検する。
+    check_wav.main(path_config_yaml)
     # ustファイルの最後が休符じゃないときに警告する。
     force_ust_end_with_rest.main(path_config_yaml)
     # ustファイル を labファイル に変換して、full_score として保存する。
