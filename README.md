@@ -42,13 +42,13 @@ NNSVS用歌声モデルをUTAU音源みたいに使えるようにするUTAUプ�
 ## 開発環境
 
 - Windows 10
-- Python 3.8.10（3.9はPytorchが未対応）
-  - utaupy 1.13.2
-  - numpy 1.20.3（1.19.4 はWindowsのバグで動かない）
+- Python 3.8（3.9はPytorchが未対応）
+  - utaupy 1.14.1
+  - numpy 1.21.2（1.19.4 はWindowsのバグで動かない）
   - torch 1.7.0+cu101
   - nnsvs 開発バージョン
   - nnmnkwii
-- CUDA 11.1
+- CUDA 11.0
 
 ## ENUNU向けUTAU音源フォルダの作り方
 
