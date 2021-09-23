@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from glob import glob
 from os import makedirs
-from os.path import basename, dirname, exists, isdir, join
+from os.path import basename, dirname, exists, isdir, join, splitext
 from typing import List
 
 KEEP_LATEST_PACKAGES = ['pip', 'setuptools', 'wheel', 'utaupy']
@@ -76,6 +76,27 @@ def create_plugin_txt(path_out, version):
         f.write(s)
 
 
+def copy_documents(path_out):
+    """
+    markdownドキュメントをリリースフォルダにコピーして、
+    txtファイルに変換する。
+    """
+    documents = {'./../LICENSE',
+                 './../README.md',
+                 './../README_English.md',
+                 './../HISTORY.md'}
+
+    for old_path in documents:
+        new_path = join(path_out, f'{basename(splitext(old_path)[0])}.txt')
+        with open(old_path, 'r', encoding='utf-8') as f:
+            s = f.read()
+        if old_path.endswith('.md'):
+            s = s.replace('\\', '')
+        # markdownからバックスラッシュを除く
+        with open(new_path, 'w', encoding='utf-8') as f:
+            f.write(s)
+
+
 def main():
     """
     全体的にいい感じにする
@@ -96,11 +117,8 @@ def main():
     makedirs(enunu_release_dir)
 
     # README をリリースフォルダにコピーする
-    print('Copying LICENSE and README and HISTORY')
-    shutil.copy2('./../LICENSE', join(enunu_release_dir, 'LICENSE.txt'))
-    shutil.copy2('./../README.md', join(enunu_release_dir, 'README.txt'))
-    shutil.copy2('./../README_English.md', join(enunu_release_dir, 'README_English.txt'))
-    shutil.copy2('./../HISTORY.md', join(enunu_release_dir, 'HISTORY.txt'))
+    print('Copying documents')
+    copy_documents(enunu_release_dir)
 
     # utaupyとかを更新する
     python_dir = 'python-3.8.10-embed-amd64'
