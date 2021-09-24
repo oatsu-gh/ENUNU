@@ -171,7 +171,7 @@ def main_as_plugin(path_plugin: str) -> str:
     # ファイル処理
     # 選択範囲のUSTを出力(musicxml用)
     print(f'{datetime.now()} : exporting UST')
-    new_ust = deepcopy(plugin)
+    new_ust = plugin.as_ust()
     for note in new_ust.notes:
         # 基本情報以外を削除
         note.suppin()
