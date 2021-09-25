@@ -7,6 +7,6 @@ omegaconf
 scipy
 torch==1.7.1
 tqdm
-utaupy>=1.10
+utaupy>=1.15.0
 pyyaml
 scikit-learn<0.24.0
