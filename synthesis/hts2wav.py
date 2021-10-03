@@ -168,7 +168,7 @@ def synthesis(config, device, label_path,
 
         # Duration predictions
         duration_binary_dict, duration_continuous_dict, duration_pitch_indices, _ \
-            = load_qst(config.timelag.question_path)
+            = load_qst(config.duration.question_path)
         durations = predict_duration(
             device, labels,
             duration_model,
@@ -184,7 +184,7 @@ def synthesis(config, device, label_path,
         duration_modified_labels = postprocess_duration(labels, durations, lag)
 
     acoustic_binary_dict, acoustic_continuous_dict, acoustic_pitch_indices, acoustic_pitch_idx \
-        = load_qst(config.timelag.question_path)
+        = load_qst(config.acoustic.question_path)
     # Predict acoustic features
     acoustic_features = predict_acoustic(
         device, duration_modified_labels,
