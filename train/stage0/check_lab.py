@@ -48,7 +48,7 @@ def repair_too_short_phoneme(lab_dir, threshold=5) -> None:
         if all(phoneme.duration >= threshold_100ns for phoneme in label):
             continue
         # 短い音素が連続しても不具合が起こらないように逆向きにループする
-        if label[0].duration < threshold_100ns:
+        if label[0].duration < threshold_100ns:  # pylint: disable=no-member
             raise ValueError(f'最初の音素が短いです。修正できません。: {label[0]} ({path_mono})')
         for i, phoneme in enumerate(reversed(label)):
             # 発声時間が閾値より短い場合
