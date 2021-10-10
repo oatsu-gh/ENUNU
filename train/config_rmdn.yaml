@@ -10,13 +10,13 @@ tag:                        enunu_train
 # will be saved in the following directory
 out_dir:                    data
 
-## Songs to be excluded from trainig.
+## Songs to be excluded from trainign.
 exclude_songs:              []
 
 ## Lyric -> Phonemes table
 ## HTS-style question used for extracting musical/linguistic context from musicxml files
 table_path:                 dic/kana2phonemes_002_oto2lab.table
-question_path:              hed/jp_qst_crazy_mono_013_enunu_221D.hed
+question_path:              hed/jp_qst_crazy_mono_014_enunu_mdn_206D.hed
 
 # Audio sampling rate
 # [CAUTION] Changing sample_rate may affect the dimension number of acoustic features.
@@ -64,17 +64,17 @@ acoustic_features:          static_deltadelta
 # specify the config name below
 # NOTE: *_model: model definition, *_train: general train configs, *_data: data configs (e.g., batch size)
 
-acoustic_model:             acoustic_conv
-acoustic_train:             myconfig
-acoustic_data:              myconfig
+acoustic_model:             acoustic_rmdn
+acoustic_train:             myconfig_rmdn
+acoustic_data:              myconfig_rmdn
 
-duration_model:             duration_lstm
-duration_train:             myconfig
-duration_data:              myconfig
+duration_model:             duration_rmdn
+duration_train:             myconfig_rmdn
+duration_data:              myconfig_rmdn
 
-timelag_model:              timelag_ffn
-timelag_train:              myconfig
-timelag_data:               myconfig
+timelag_model:              timelag_rmdn
+timelag_train:              myconfig_rmdn
+timelag_data:               myconfig_rmdn
 
 # Pretrained model dir (leave empty to disable)
 # pretrained_expdir:          exp/ritsu_enunu_rmdn_0831

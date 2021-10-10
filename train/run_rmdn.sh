@@ -25,7 +25,7 @@ NNSVS_COMMON_ROOT="$NNSVS_ROOT/egs/_common/spsvs"
 NO2_ROOT="$NNSVS_ROOT/egs/_common/no2"
 . "$NNSVS_ROOT/utils/yaml_parser.sh" || exit 1;
 
-eval $(parse_yaml "./config.yaml" "")
+eval $(parse_yaml "./config_rmdn.yaml" "")
 
 train_set=train_no_dev
 dev_set=dev
@@ -69,8 +69,8 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "#                                       #"
     echo "#########################################"
     rm -rf $out_dir
-    rm -f preprocess_data.py.log
-    python preprocess_data.py ./config.yaml
+    rm -f stage0.log
+    python preprocess_data.py ./config_rmdn.yaml
     echo ""
 fi
 

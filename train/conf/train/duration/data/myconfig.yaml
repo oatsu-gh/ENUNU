@@ -11,6 +11,6 @@ dev:
   out_dir:
 
 # data loader
-num_workers: 8
-batch_size: 16
-pin_memory: true
+num_workers:  8
+batch_size:   16
+pin_memory:   true
