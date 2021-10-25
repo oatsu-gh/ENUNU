@@ -12,11 +12,9 @@ from datetime import datetime
 from os import chdir, makedirs, startfile
 from os.path import basename, dirname, exists, join, splitext
 from sys import argv
-from tempfile import mkdtemp
 
 import utaupy
 from omegaconf import DictConfig, OmegaConf
-from tqdm import tqdm
 from utaupy.utils import hts2json, ustobj2songobj
 
 try:
@@ -214,6 +212,7 @@ def main_as_plugin(path_plugin: str) -> str:
     # NOTE: ここGTS追加機能
     path_mono_align_lab = input('タイミング補正済みの LABファイル (timing) を指定してください。\n>>> ').strip('"')
     path_full_score_lab = input('タイミング補正前の LABファイル (full_score) を指定してください。\n>>> ').strip('"')
+    print("")
 
     # カレントディレクトリを音源フォルダに変更する
     chdir(voice_dir)
@@ -276,7 +275,7 @@ def main(path: str):
 
 if __name__ == '__main__':
     print('_____ξ ・ヮ・)ξ < ENUNU v0.2.5 ________')
-    print('_____ξ ＾ω＾)ξ < Ground Truth Duration (20211022-1) ________')
+    print('_____ξ ＾ω＾)ξ < Ground Truth Duration (20211022) ________')
     print(f'argv: {argv}')
     if len(argv) == 2:
         path_utauplugin = argv[1]

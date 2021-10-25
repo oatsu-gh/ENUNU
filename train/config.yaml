@@ -38,7 +38,7 @@ stage0:
     # If "middle", LAB is devided at the start of each <middle_frequency> "pau"s.
     # If "short",  LAB is devided at the start of each "pau" phoneme.
     segmentation_mode:      middle
-    middle_frequency:       5
+    middle_frequency:       3
 
     # Choices are [strict, middle, lenient]
     vowel_duration_check:   middle

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # Copyright (c) 2021 oatsu
 """
 配布用フォルダを準備する
@@ -8,6 +8,7 @@ from glob import glob
 from os import makedirs
 from os.path import exists
 from shutil import copy2, copytree
+from sys import argv
 
 import yaml
 from send2trash import send2trash
@@ -84,13 +85,13 @@ def copy_enuconfig(release_dir):
     copy2('enuconfig.yaml', f'{release_dir}/enuconfig.yaml')
 
 
-def main():
+def main(path_config_yaml):
     """
     各種ファイルをコピーする
     """
     # load settings
-    with open('config.yaml', 'r') as f_yaml:
-        config = yaml.load(f_yaml, Loader=yaml.FullLoader)
+    with open(path_config_yaml, 'r') as f_yaml:
+        config = yaml.safe_load(f_yaml)
     singer = config['spk'].strip('"\'')
     config_dir = 'conf'
     release_dir = f'release/{singer}_---'
@@ -113,4 +114,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if len(argv) == 1:
+        main('config.yaml')
+    else:
+        main(argv[1].strip('"'))

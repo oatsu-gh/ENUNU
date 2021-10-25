@@ -16,20 +16,26 @@ function xrun () {
 }
 
 # use embed python executional file
-# alias python="python-3.8.10-embed-amd64/python"
+PYTHON_ROOT="python-3.8.10-embed-amd64"
+PYTHON_SCRIPTS_ROOT="$PYTHON_ROOT/Scripts"
+CONFIG_PATH="config_rmdn.yaml"
 
 script_dir=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd)
 
-NNSVS_ROOT="nnsvs"
-NNSVS_COMMON_ROOT="$NNSVS_ROOT/egs/_common/spsvs"
-NO2_ROOT="$NNSVS_ROOT/egs/_common/no2"
-. "$NNSVS_ROOT/utils/yaml_parser.sh" || exit 1;
+# changed-----------------------------------------------
+# NNSVS_ROOT="nnsvs"
+# NNSVS_COMMON_ROOT="nnsvs/egs/_common/spsvs"
+# . "$NNSVS_ROOT/utils/yaml_parser.sh" || exit 1;
+# to----------------------------------------------------
+NNSVS_SHELL_SCRIPTS_ROOT="nnsvs_shell_scripts"
+. $NNSVS_SHELL_SCRIPTS_ROOT/yaml_parser.sh || exit 1;
+# ------------------------------------------------------
 
-eval $(parse_yaml "./config_rmdn.yaml" "")
+eval $(parse_yaml $CONFIG_PATH "")
 
-train_set=train_no_dev
-dev_set=dev
-eval_set=eval
+train_set="train_no_dev"
+dev_set="dev"
+eval_set="eval"
 datasets=($train_set $dev_set $eval_set)
 testsets=($dev_set $eval_set)
 
@@ -37,10 +43,14 @@ dumpdir=dump
 dump_org_dir="$dumpdir/$spk/org"
 dump_norm_dir="$dumpdir/$spk/norm"
 
-stage=0
-stop_stage=0
+stage=-1
+stop_stage=-1
 
-. $NNSVS_ROOT/utils/parse_options.sh || exit 1;
+# changed-----------------------------------------------
+# . $NNSVS_ROOT/parse_options.sh || exit 1;
+# to----------------------------------------------------
+. $NNSVS_SHELL_SCRIPTS_ROOT/parse_options.sh || exit 1;
+# ------------------------------------------------------
 
 # exp name
 if [ -z ${tag:=} ]; then
@@ -51,16 +61,6 @@ fi
 expdir="exp/$expname"
 
 
-# assert singing-database exits
-if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
-    if [ ! -e $db_root ]; then
-	cat<<EOF
-singing-database is not found
-EOF
-    fi
-fi
-
-
 # Prepare files in singing-database for training
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "#########################################"
@@ -69,8 +69,8 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "#                                       #"
     echo "#########################################"
     rm -rf $out_dir
-    rm -f stage0.log
-    python preprocess_data.py ./config_rmdn.yaml
+    rm -f preprocess_data.py.log
+    $PYTHON_ROOT/python preprocess_data.py $CONFIG_PATH || exit 1;
     echo ""
 fi
 
@@ -83,7 +83,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     echo "#                                        #"
     echo "##########################################"
     rm -rf $dumpdir
-    . $NNSVS_COMMON_ROOT/feature_generation.sh
+    . $NNSVS_COMMON_ROOT/feature_generation.sh || exit 1;
     echo ""
 fi
 
@@ -95,7 +95,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     echo "#  stage 2: Time-lag model training      #"
     echo "#                                        #"
     echo "##########################################"
-    . $NNSVS_COMMON_ROOT/train_timelag.sh
+    . $NNSVS_COMMON_ROOT/train_timelag.sh || exit 1;
     echo ""
 fi
 
@@ -107,7 +107,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "#  stage 3: Duration model training      #"
     echo "#                                        #"
     echo "##########################################"
-    . $NNSVS_COMMON_ROOT/train_duration.sh
+    . $NNSVS_COMMON_ROOT/train_duration.sh || exit 1;
     echo ""
 fi
 
@@ -119,7 +119,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "#  stage 4: Training acoustic model      #"
     echo "#                                        #"
     echo "##########################################"
-    . $NNSVS_COMMON_ROOT/train_acoustic.sh
+    . $NNSVS_COMMON_ROOT/train_acoustic.sh || exit 1;
     echo ""
 fi
 
@@ -131,7 +131,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     echo "#  stage 5: Feature generation           #"
     echo "#                                        #"
     echo "##########################################"
-    . $NNSVS_COMMON_ROOT/generate.sh
+    . $NNSVS_COMMON_ROOT/generate.sh || exit 1;
     echo ""
 fi
 
@@ -155,6 +155,6 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
     echo "#  stage 7: Release preparation          #"
     echo "#                                        #"
     echo "##########################################"
-    python prepare_release.py
+    $PYTHON_ROOT/python prepare_release.py $CONFIG_PATH || exit 1;
     echo ""
 fi
