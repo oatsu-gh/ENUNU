@@ -39,7 +39,8 @@ for s in ${testsets[@]}; do
 
         checkpoint=$expdir/$typ/${eval_checkpoint}
         name=$(basename $checkpoint)
-        xrun $PYTHON_SCRIPTS_ROOT/nnsvs-generate model.checkpoint=$checkpoint \
+        xrun $PYTHON_EXE -m nnsvs.bin.generate \
+            model.checkpoint=$checkpoint \
             model.model_yaml=$expdir/$typ/model.yaml \
             out_scaler_path=$dump_norm_dir/out_${typ}_scaler.joblib \
             in_dir=$dump_norm_dir/$s/in_${typ}/ \

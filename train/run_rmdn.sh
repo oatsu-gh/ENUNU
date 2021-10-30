@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ##########
-# customized for ENUNU-Training-Kit on Windows
+# customized for Portable ENUNU Training Kit on Windows
 ##########
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -17,6 +17,7 @@ function xrun () {
 
 # use embed python executional file
 PYTHON_ROOT="python-3.8.10-embed-amd64"
+PYTHON_EXE="$PYTHON_ROOT/python.exe"
 PYTHON_SCRIPTS_ROOT="$PYTHON_ROOT/Scripts"
 CONFIG_PATH="config_rmdn.yaml"
 
@@ -43,7 +44,7 @@ dumpdir=dump
 dump_org_dir="$dumpdir/$spk/org"
 dump_norm_dir="$dumpdir/$spk/norm"
 
-stage=-1
+stage=0
 stop_stage=-1
 
 # changed-----------------------------------------------
@@ -83,7 +84,11 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     echo "#                                        #"
     echo "##########################################"
     rm -rf $dumpdir
-    . $NNSVS_COMMON_ROOT/feature_generation.sh || exit 1;
+    # changed-----------------------------------------------
+    # . $NNSVS_COMMON_ROOT/feature_generation.sh || exit 1;
+    # to----------------------------------------------------
+    . $NNSVS_SHELL_SCRIPTS_ROOT/feature_generation.sh || exit 1;
+    # ------------------------------------------------------
     echo ""
 fi
 
@@ -95,7 +100,11 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     echo "#  stage 2: Time-lag model training      #"
     echo "#                                        #"
     echo "##########################################"
-    . $NNSVS_COMMON_ROOT/train_timelag.sh || exit 1;
+    # changed-----------------------------------------------
+    # . $NNSVS_COMMON_ROOT/train_timelag.sh || exit 1;
+    # to----------------------------------------------------
+    . $NNSVS_SHELL_SCRIPTS_ROOT/train_timelag.sh || exit 1;
+    # ------------------------------------------------------
     echo ""
 fi
 
@@ -107,7 +116,11 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "#  stage 3: Duration model training      #"
     echo "#                                        #"
     echo "##########################################"
-    . $NNSVS_COMMON_ROOT/train_duration.sh || exit 1;
+    # changed-----------------------------------------------
+    # . $NNSVS_COMMON_ROOT/train_duration.sh || exit 1;
+    # to----------------------------------------------------
+    . $NNSVS_SHELL_SCRIPTS_ROOT/train_duration.sh || exit 1;
+    # ------------------------------------------------------
     echo ""
 fi
 
@@ -119,7 +132,11 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "#  stage 4: Training acoustic model      #"
     echo "#                                        #"
     echo "##########################################"
-    . $NNSVS_COMMON_ROOT/train_acoustic.sh || exit 1;
+    # changed-----------------------------------------------
+    # . $NNSVS_COMMON_ROOT/train_acoustic.sh || exit 1;
+    # to----------------------------------------------------
+    . $NNSVS_SHELL_SCRIPTS_ROOT/train_acoustic.sh || exit 1;
+    # ------------------------------------------------------
     echo ""
 fi
 
@@ -131,7 +148,11 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     echo "#  stage 5: Feature generation           #"
     echo "#                                        #"
     echo "##########################################"
-    . $NNSVS_COMMON_ROOT/generate.sh || exit 1;
+    # changed-----------------------------------------------
+    # . $NNSVS_COMMON_ROOT/generate.sh || exit 1;
+    # to----------------------------------------------------
+    . $NNSVS_SHELL_SCRIPTS_ROOT/generate.sh || exit 1;
+    # ------------------------------------------------------
     echo ""
 fi
 

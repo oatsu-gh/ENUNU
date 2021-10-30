@@ -38,7 +38,7 @@ if [ ! -z "${pretrained_expdir}" ]; then
 else
     resume_checkpoint=
 fi
-xrun $PYTHON_SCRIPTS_ROOT/nnsvs-train $ext \
+xrun $PYTHON_EXE -m nnsvs.bin.train $ext \
     model=$duration_model train=$duration_train data=$duration_data \
     data.train_no_dev.in_dir=$dump_norm_dir/$train_set/in_duration/ \
     data.train_no_dev.out_dir=$dump_norm_dir/$train_set/out_duration/ \

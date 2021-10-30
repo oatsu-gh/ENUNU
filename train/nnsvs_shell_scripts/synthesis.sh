@@ -50,7 +50,7 @@ for s in ${testsets[@]}; do
         else
             ground_truth_duration=true
         fi
-        xrun $PYTHON_SCRIPTS_ROOT/nnsvs-synthesis $ext \
+        xrun $PYTHON_EXE -m nnsvs.bin.synthesis $ext \
             question_path=$question_path \
             timelag=$timelag_synthesis \
             duration=$duration_synthesis \
