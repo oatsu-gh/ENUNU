@@ -92,14 +92,16 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     echo ""
 fi
 
-
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 2 ]; then
+    echo "--------- 1st Training -------------------------------------------------------"
+fi
 # Train time-lag model
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-    echo "##########################################"
-    echo "#                                        #"
-    echo "#  stage 2: Time-lag model training      #"
-    echo "#                                        #"
-    echo "##########################################"
+    echo "############################################"
+    echo "#                                          #"
+    echo "#  stage 2: Time-lag model training (1st)  #"
+    echo "#                                          #"
+    echo "############################################"
     # changed-----------------------------------------------
     # . $NNSVS_COMMON_ROOT/train_timelag.sh || exit 1;
     # to----------------------------------------------------
@@ -107,15 +109,13 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     # ------------------------------------------------------
     echo ""
 fi
-
-
 # Train duration model
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    echo "##########################################"
-    echo "#                                        #"
-    echo "#  stage 3: Duration model training      #"
-    echo "#                                        #"
-    echo "##########################################"
+    echo "############################################"
+    echo "#                                          #"
+    echo "#  stage 3: Duration model training (1st)  #"
+    echo "#                                          #"
+    echo "############################################"
     # changed-----------------------------------------------
     # . $NNSVS_COMMON_ROOT/train_duration.sh || exit 1;
     # to----------------------------------------------------
@@ -123,15 +123,65 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # ------------------------------------------------------
     echo ""
 fi
-
-
 # Train acoustic model
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
-    echo "##########################################"
-    echo "#                                        #"
-    echo "#  stage 4: Training acoustic model      #"
-    echo "#                                        #"
-    echo "##########################################"
+    echo "############################################"
+    echo "#                                          #"
+    echo "#  stage 4: Training acoustic model (1st)  #"
+    echo "#                                          #"
+    echo "############################################"
+    # changed-----------------------------------------------
+    # . $NNSVS_COMMON_ROOT/train_acoustic.sh || exit 1;
+    # to----------------------------------------------------
+    . $NNSVS_SHELL_SCRIPTS_ROOT/train_acoustic.sh || exit 1;
+    # ------------------------------------------------------
+    echo ""
+fi
+
+
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 2 ]; then
+    echo "--------- 2nd Training -------------------------------------------------------"
+fi
+# set current expdir as pretrained_expdir
+pretrained_expdir=$expdir
+# Train time-lag model
+timelag_train=$timelag_train_2nd
+if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+    echo "############################################"
+    echo "#                                          #"
+    echo "#  stage 2: Time-lag model training (2nd)  #"
+    echo "#                                          #"
+    echo "############################################"
+    # changed-----------------------------------------------
+    # . $NNSVS_COMMON_ROOT/train_timelag.sh || exit 1;
+    # to----------------------------------------------------
+    . $NNSVS_SHELL_SCRIPTS_ROOT/train_timelag.sh || exit 1;
+    # ------------------------------------------------------
+    echo ""
+fi
+# Train duration model
+duration_train=$duration_train_2nd
+if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+    echo "############################################"
+    echo "#                                          #"
+    echo "#  stage 3: Duration model training (2nd)  #"
+    echo "#                                          #"
+    echo "############################################"
+    # changed-----------------------------------------------
+    # . $NNSVS_COMMON_ROOT/train_duration.sh || exit 1;
+    # to----------------------------------------------------
+    . $NNSVS_SHELL_SCRIPTS_ROOT/train_duration.sh || exit 1;
+    # ------------------------------------------------------
+    echo ""
+fi
+# Train acoustic model
+acoustic_train=$acoustic_train_2nd
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
+    echo "############################################"
+    echo "#                                          #"
+    echo "#  stage 4: Training acoustic model (2nd)  #"
+    echo "#                                          #"
+    echo "############################################"
     # changed-----------------------------------------------
     # . $NNSVS_COMMON_ROOT/train_acoustic.sh || exit 1;
     # to----------------------------------------------------
