@@ -61,13 +61,13 @@ def generate_train_list(out_dir, interval: Union[int, None] = None):
     path_dev_list = join(out_dir, 'list', 'dev.list')
     path_train_list = join(out_dir, 'list', 'train_no_dev.list')
     # ファイル出力
-    with open(path_utt_list, mode='w', encoding='utf-8', newline='\n') as f_utt:
+    with open(path_utt_list, mode='w', newline='\n') as f_utt:
         f_utt.write('\n'.join(utt_list))
-    with open(path_eval_list, mode='w', encoding='utf-8', newline='\n') as f_utt:
+    with open(path_eval_list, mode='w', newline='\n') as f_utt:
         f_utt.write('\n'.join(eval_list))
-    with open(path_dev_list, mode='w', encoding='utf-8', newline='\n') as f_utt:
+    with open(path_dev_list, mode='w', newline='\n') as f_utt:
         f_utt.write('\n'.join(dev_list))
-    with open(path_train_list, mode='w', encoding='utf-8', newline='\n') as f_utt:
+    with open(path_train_list, mode='w', newline='\n') as f_utt:
         f_utt.write('\n'.join(train_list))
 
 

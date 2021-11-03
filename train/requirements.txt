@@ -3,3 +3,5 @@ tqdm
 utaupy
 nnmnkwii
 pydub
+natsort
+send2trash
