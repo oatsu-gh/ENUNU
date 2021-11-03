@@ -6,7 +6,7 @@
 
 from glob import glob
 from os import makedirs
-from os.path import exists
+from os.path import basename, exists
 from shutil import copy2, copytree
 from sys import argv
 
@@ -69,20 +69,36 @@ def copy_model(singer, exp_name, release_dir):
         copy2(path_model, f'{release_dir}/{path_model}')
 
 
-def copy_general_config(release_dir):
+def copy_general_config(path_config_yaml, release_dir):
     """
     singer: 歌唱者名
     """
-    print('copying config.yaml')
-    copy2('config.yaml', f'{release_dir}/config.yaml')
+    print(f'copying {basename(path_config_yaml)}')
+    copy2(path_config_yaml, f'{release_dir}/{basename(path_config_yaml)}')
 
 
-def copy_enuconfig(release_dir):
+def copy_enuconfig(path_config_yaml, path_enuconfig_yaml, release_dir):
     """
-    singer: 歌唱者名
+    enuconfig の hed ファイル名を、学習に使ったものに合わせる。
     """
+    # 学習フォルダにあるconfigとenuconfigを読み取る
+    with open(path_enuconfig_yaml, 'r', encoding='utf-8') as f:
+        enuconfig = yaml.safe_load(f)
+    with open(path_config_yaml, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    with open(path_enuconfig_yaml, 'r', encoding='utf-8') as f:
+        s = f.read()
+
+    # hedファイルを指定する項目を上書きする
+    old_qst_path = enuconfig['question_path'].strip('"\'')
+    new_qst_path = config['question_path'].strip('"\'')
+    print(old_qst_path, new_qst_path)
+    s = s.replace(old_qst_path, new_qst_path)
+
+    # 置換済みの文字列で書き換えたenuconfigをreleaseフォルダに保存
     print('copying enuconfig.yaml')
-    copy2('enuconfig.yaml', f'{release_dir}/enuconfig.yaml')
+    with open(f'{release_dir}/enuconfig.yaml', 'w', encoding='utf-8') as f:
+        s = f.write(s)
 
 
 def main(path_config_yaml):
@@ -104,8 +120,8 @@ def main(path_config_yaml):
         print('Sending existing directory to recycle bin')
         send2trash(release_dir)
     makedirs(release_dir, exist_ok=True)
-    copy_general_config(release_dir)
-    copy_enuconfig(release_dir)
+    copy_general_config(path_config_yaml, release_dir)
+    copy_enuconfig(path_config_yaml, 'enuconfig.yaml', release_dir)
     copy_train_config(config_dir, release_dir)
     copy_dictionary(path_table, release_dir)
     copy_question(path_question, release_dir)
