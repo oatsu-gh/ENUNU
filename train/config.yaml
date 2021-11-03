@@ -3,7 +3,7 @@ nnsvs_root:                 nnsvs
 ## Singer's name
 spk:                        unnamed
 ## exp tag(for managing experiments)
-tag:                        enunu_train
+tag:                        portable_enunu_training_kit
 
 ## Output directory
 # All the generated labels, intermediate files, and segmented wav files

@@ -1,7 +1,7 @@
 # @package _group_
 
 out_dir:                    exp
-nepochs:                    50
+nepochs:                    100
 checkpoint_epoch_interval:  20
 
 stream_wise_loss:           false
@@ -11,14 +11,15 @@ optim:
   optimizer:
     name:                   RAdam
     params:
-      lr:                   0.001
+      lr:                   0.0001
       betas:                [0.9, 0.999]
-      weight_decay:         0.0
+      weight_decay:         0
   lr_scheduler:
     name:                   StepLR
     params:
-      step_size:            20
+      step_size:            10
       gamma:                0.5
+      verbose:              True
 
 resume:
   checkpoint:

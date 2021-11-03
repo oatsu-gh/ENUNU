@@ -1,15 +1,15 @@
 # @package _group_
 
 out_dir:                    exp
-nepochs:                    60
-checkpoint_epoch_interval:  50
+nepochs:                    50
+checkpoint_epoch_interval:  20
 
 stream_wise_loss:           false
 use_detect_anomaly:         true
 
 optim:
   optimizer:
-    name:                   Adam
+    name:                   RAdam
     params:
       lr:                   0.001
       betas:                [0.9, 0.999]
