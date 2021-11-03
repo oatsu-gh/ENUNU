@@ -1,8 +1,8 @@
 ./data
-dump
-exp
-nnsvs
-singing_database
+./dump
+./exp
+./nnsvs
+./singing_database
 
 *.ini
 *.lab
