@@ -5,17 +5,16 @@
 フルラベルと、タイミング補正済みモノラベルからWAVファイルを生成する。
 モデルは…？
 """
-import logging
+import copy
+import shutil
 # from copy import deepcopy
 from datetime import datetime
 from os import chdir, makedirs, startfile
 from os.path import basename, dirname, exists, join, splitext
 from sys import argv
-from tempfile import mkdtemp
 
 import utaupy
 from omegaconf import DictConfig, OmegaConf
-from tqdm import tqdm
 from utaupy.utils import hts2json, ustobj2songobj
 
 try:
@@ -130,7 +129,7 @@ def repair_too_short_phoneme(label, threshold=5) -> None:
     for i, phoneme in enumerate(reversed(label)):
         # 発声時間が閾値より短い場合
         if phoneme.duration < threshold_100ns:
-            logging.warning('短い音素を修正します。: %s', phoneme)
+            print('短い音素を修正します。:', phoneme)
             # 閾値との差分を計算する。この分だけずらす。
             delta_t = threshold_100ns - phoneme.duration
             # 対象の音素の開始時刻をずらして、発生時間を伸ばす。
@@ -145,7 +144,7 @@ def generate_full_align_lab(path_mono_align_lab_in,
                             path_full_score_lab_in,
                             path_full_align_lab_out):
     """
-    タイミング補正済みのものラベルと、
+    タイミング補正済みのモノラベルと、
     タイミング補正前のフルラベルから、
     タイミング補正済みのフルラベルを作る。
     """
@@ -155,8 +154,8 @@ def generate_full_align_lab(path_mono_align_lab_in,
     repair_too_short_phoneme(mono_align_lab)
     assert len(mono_align_lab) == len(full_score_lab)
     full_align_lab = utaupy.label.Label()
-    # タイミング補正をフルラベルに適用したLabelオブジェクトを作る。ｓ
-    for mono_align_phoneme, full_score_phoneme in zip(tqdm(mono_align_lab), full_score_lab):
+    # タイミング補正をフルラベルに適用したLabelオブジェクトを作る。
+    for mono_align_phoneme, full_score_phoneme in zip(mono_align_lab, full_score_lab):
         phoneme = utaupy.label.Phoneme()
         phoneme.start = mono_align_phoneme.start
         phoneme.end = mono_align_phoneme.end
@@ -166,6 +165,34 @@ def generate_full_align_lab(path_mono_align_lab_in,
     full_align_lab.write(path_full_align_lab_out)
 
 
+def generate_mono_score_lab(path_full_score_lab_in,
+                            path_mono_align_lab_in,
+                            path_mono_score_lab_out):
+    """
+    タイミング補正済みのモノラベルと、
+    タイミング補正前のフルラベルから、
+    タイミング補正済みのフルラベルを作る。
+    """
+    full_score_lab = utaupy.label.load(path_full_score_lab_in)
+    mono_align_lab = utaupy.label.load(path_mono_align_lab_in)
+    # mono_align_lab.is_valid(threshold=0)
+    # repair_too_short_phoneme(mono_align_lab)
+    assert len(mono_align_lab) == len(full_score_lab)
+    mono_score_lab = copy.copy(full_score_lab)
+    # タイミング補正をフルラベルに適用したLabelオブジェクトを作る。ｓ
+    mono_score_lab.contexts = mono_align_lab.contexts
+    # ファイル出力
+    mono_score_lab.write(path_mono_score_lab_out)
+
+
+def get_original_songname(path) -> str:
+    """
+    dirname/songname__datetime.ext から、songname部分を取り出す。
+    """
+    basename_without_ext = splitext(basename(path))[0]
+    return basename_without_ext.split('__')[0]
+
+
 def main_as_plugin(path_plugin: str) -> str:
     """
     UtauPluginオブジェクトから音声ファイルを作る
@@ -173,7 +200,7 @@ def main_as_plugin(path_plugin: str) -> str:
     print(f'{datetime.now()} : reading setting in ust')
     # UTAUの一時ファイルに書いてある設定を読み取る
     plugin = utaupy.utauplugin.load(path_plugin)
-    path_ust, voice_dir, _ = get_project_path(plugin)
+    _, voice_dir, _ = get_project_path(plugin)
 
     path_enuconfig = join(voice_dir, 'enuconfig.yaml')
     if not exists(path_enuconfig):
@@ -183,8 +210,9 @@ def main_as_plugin(path_plugin: str) -> str:
         )
 
     # NOTE: ここGTS追加機能
-    path_mono_align_lab = input('タイミング補正済みの LABファイル (timing) を指定してください。\n>>> ')
-    path_full_score_lab = input('タイミング補正前の LABファイル (full_score) を指定してください。\n>>> ')
+    path_mono_align_lab = input('タイミング補正済みの LABファイル (timing) を指定してください。\n>>> ').strip('"')
+    path_full_score_lab = input('タイミング補正前の LABファイル (full_score) を指定してください。\n>>> ').strip('"')
+    print("")
 
     # カレントディレクトリを音源フォルダに変更する
     chdir(voice_dir)
@@ -194,25 +222,19 @@ def main_as_plugin(path_plugin: str) -> str:
 
     # 入出力パスを設定する
     str_now = datetime.now().strftime('%Y%m%d%H%M%S')
-    if path_ust is not None:
-        songname = f'{splitext(basename(path_ust))[0]}__{str_now}'
-        out_dir = join(dirname(path_ust), songname)
-    # USTが未保存の場合
-    else:
-        print('USTが保存されていないので一時フォルダにWAV出力します。')
-        songname = f'temp__{str_now}'
-        out_dir = mkdtemp(prefix='enunu-')
+    songname = f'{get_original_songname(path_mono_align_lab)}__{str_now}'
+    out_dir = join(dirname(path_mono_align_lab), songname)
 
     # 出力フォルダがなければつくる
     makedirs(out_dir, exist_ok=True)
 
     # 各種出力ファイルのパスを設定
     path_full_align_lab = join(out_dir, f'{songname}_full_align.lab')
-    # path_mono_score_lab = join(out_dir, f'{songname}_mono_score.lab')
-    # path_json = join(out_dir, f'{songname}_full_score.json')
-    path_wav = join(out_dir, f'{songname}.wav')
+    path_mono_score_lab = join(out_dir, f'{songname}_mono_score.lab')
     # path_ust_out = join(out_dir, f'{songname}.ust')
-    path_json = join(out_dir, f'{songname}_full_align.json')
+    path_score_json = join(out_dir, f'{songname}_full_score.json')
+    path_align_json = join(out_dir, f'{songname}_full_align.json')
+    path_wav = join(out_dir, f'{songname}.wav')
 
     # TODO: ここ英語にする
     # NOTE: ここGTD追加機能
@@ -221,11 +243,19 @@ def main_as_plugin(path_plugin: str) -> str:
     generate_full_align_lab(path_mono_align_lab, path_full_score_lab, path_full_align_lab)
     config.ground_truth_duration = True
 
+    print(f'{datetime.now()} : converting LAB (full_score) to JSON')
+    hts2json(path_full_score_lab, path_score_json)
     print(f'{datetime.now()} : converting LAB (full_align) to JSON')
-    hts2json(path_full_align_lab, path_json)
+    hts2json(path_full_align_lab, path_align_json)
     print(f'{datetime.now()} : converting LAB (full_align) to WAV')
     hts2wav(config, path_full_align_lab, path_wav)
     print(f'{datetime.now()} : generating WAV ({path_wav})')
+
+    # おまけ機能
+    print(f'{datetime.now()} : full_score をコピーします。')
+    shutil.copy2(path_full_score_lab, join(out_dir, f'{songname}_full_score.lab'))
+    print(f'{datetime.now()} : mono_score を生成します。')
+    generate_mono_score_lab(path_full_score_lab, path_mono_align_lab, path_mono_score_lab)
     # Windowsの時は音声を再生する。
     startfile(path_wav)
 
@@ -245,7 +275,7 @@ def main(path: str):
 
 if __name__ == '__main__':
     print('_____ξ ・ヮ・)ξ < ENUNU v0.2.5 ________')
-    print('_____ξ ＾ω＾)ξ < Ground Truth Duration (20211003-5) ________')
+    print('_____ξ ＾ω＾)ξ < Ground Truth Duration (20211022) ________')
     print(f'argv: {argv}')
     if len(argv) == 2:
         path_utauplugin = argv[1]
