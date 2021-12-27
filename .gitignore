@@ -9,3 +9,4 @@ dump
 outputs
 release
 __pycache__
+*.lnk
