@@ -70,8 +70,8 @@ def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None
             note.lyric = 'R'
 
     # [#PREV] や [#NEXT] が含まれているか判定
-    prev_exists = not plugin.previous_note is None
-    next_exists = not plugin.next_note is None
+    prev_exists = plugin.previous_note is not None
+    next_exists = plugin.next_note is not None
     if prev_exists:
         plugin.notes.insert(0, plugin.previous_note)
     if next_exists:
