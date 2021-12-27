@@ -55,8 +55,8 @@ def gen_waveform(labels,
                  sample_rate=48000,
                  frame_period=5,
                  relative_f0=True):
+    # pylint: disable=no-member
     windows = get_windows(num_windows)
-
     # Apply MLPG if necessary
     if np.any(has_dynamic_features):
         static_stream_sizes = get_static_stream_sizes(
@@ -82,7 +82,7 @@ def gen_waveform(labels,
     # WORLD fails catastrophically for out of range aperiodicity
     aperiodicity = np.clip(aperiodicity, 0.0, 1.0)
 
-    ### F0 ###
+    # F0
     if relative_f0:
         diff_lf0 = target_f0
         # need to extract pitch sequence from the musical score
