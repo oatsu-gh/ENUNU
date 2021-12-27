@@ -32,14 +32,20 @@ nnsvs.bin.synthesis を改変した。
 #
 # ---------------------------------------------------------------------------------
 
+import subprocess
 from datetime import datetime
-from os.path import join, relpath, split, splitext
+# from os import getcwd, makedirs
+from os.path import (basename, dirname, exists, isfile, join, relpath, split,
+                     splitext)
 from sys import argv
+# from tempfile import TemporaryDirectory
+from typing import Union
 
 import hydra
 import joblib
 import numpy as np
 import torch
+import utaupy
 from hydra.experimental import compose, initialize
 from nnmnkwii.io import hts
 from nnsvs.bin.synthesis import maybe_set_normalization_stats_
@@ -118,8 +124,6 @@ def set_each_question_path(config: DictConfig):
     for typ in ('timelag', 'duration', 'acoustic'):
         if config[typ].question_path is None:
             config[typ].question_path = config.question_path
-        else:
-            config[typ].question_path = config[typ].question_path
 
 
 def load_qst(question_path, append_hat_for_LL=False) -> tuple:
@@ -132,6 +136,91 @@ def load_qst(question_path, append_hat_for_LL=False) -> tuple:
     pitch_indices = np.arange(len(binary_dict), len(binary_dict) + 3)
     pitch_idx = len(binary_dict) + 1
     return (binary_dict, continuous_dict, pitch_indices, pitch_idx)
+
+
+def call_external_lab_editor(path_editor,
+                             full_score: Union[hts.HTSLabelFile, utaupy.hts.HTSFullLabel],
+                             full_align: Union[hts.HTSLabelFile, utaupy.hts.HTSFullLabel],
+                             encoding='utf-8') -> hts.HTSLabelFile:
+    """
+    ラベルファイルを外部ソフトで加工する。
+    mono_score, mono_align, full_score, full_align のファイルを外部ソフトに渡して、
+    加工後のファイルを読み取って変更があるかどうか調べる。
+
+    mono_align が変更されている場合は、full_align に時刻をコピーしたオブジェクトを返す。
+    mono_align が変更されず full_align が変更されている場合は、full_align を返す。
+    どちらも変更されていない場合は、一応新規に読み取った full_align を返す。
+    """
+    path_editor = path_editor.strip('"')
+    if path_editor is None:
+        return full_align
+    if not exists(path_editor):
+        raise ValueError(f'指定された外部ソフトが見つかりません。({path_editor})')
+    if not isfile(path_editor):
+        raise ValueError(f'指定されたパスはファイルではありません。({path_editor})')
+
+    # 外部ソフトが適切に指定されている場合の処理
+    # 一時フォルダを作成
+    temp_dir_name = join(dirname(path_editor))
+    # 一時ファイルのパスを決定
+    path_mono_score = join(temp_dir_name, 'enunu_mono_score.lab')
+    path_full_score = join(temp_dir_name, 'enunu_full_score.lab')
+    path_mono_align = join(temp_dir_name, 'enunu_mono_align.lab')
+    path_full_align = join(temp_dir_name, 'enunu_full_align.lab')
+
+    # full_score と mono_score を出力
+    # nnmnkwiiのフルラベルオブジェクトの時
+    if isinstance(full_score, hts.HTSLabelFile):
+        with open(path_full_score, 'w', encoding=encoding) as f:
+            f.write(str(full_score))
+        mono_score = utaupy.hts.load(path_full_score).as_mono()
+        mono_score.write(path_mono_score, encoding=encoding)
+    # utaupyのフルラベルオブジェクトの時
+    elif isinstance(full_score, utaupy.hts.HTSFullLabel):
+        full_score.write(path_full_score, encoding=encoding)
+        mono_score = full_score.as_mono()
+        mono_score.write(path_mono_score, encoding=encoding)
+    else:
+        raise AttributeError(
+            'Full_score must be nnmnkwii.io.hts.HTSLabelFile or utaupy.hts.HTSFullLabel object.')
+
+    # full_align と mono_align を出力
+    if full_align is not None:
+        if isinstance(full_align, hts.HTSLabelFile):
+            with open(path_full_align, 'w', encoding=encoding) as f:
+                f.write(str(full_align))
+            mono_align = utaupy.hts.load(str(full_align).splitlines()).as_mono()
+            mono_align.write(path_mono_align, encoding=encoding)
+        elif isinstance(full_align, utaupy.hts.HTSFullLabel):
+            full_align.write(path_full_align, encoding=encoding)
+            mono_align = full_align.as_mono()
+            mono_align.write(path_mono_align, encoding=encoding)
+        else:
+            raise AttributeError(
+                'Full_align must be nnmnkwii.io.hts.HTSLabelFile or utaupy.hts.HTSFullLabel object.')
+
+    # 外部ソフトを、外部ソフトのあるフォルダで実行する。
+    args = [path_editor,
+            '--mono_score', basename(path_mono_score),
+            '--full_score', basename(path_full_score),
+            '--mono_align', basename(path_mono_align),
+            '--full_align', basename(path_full_align)]
+    print(args)
+    subprocess.run(args, cwd=dirname(path_editor.strip('\'"')), check=True)
+
+    # 外部ソフトで加工した結果のファイルを読み取る。
+    mono_align_edited = utaupy.label.load(path_mono_align)
+    # mono_align が編集されている場合は full_align に時刻を上書きする。
+    if str(mono_align_edited) != str(mono_align):
+        full_align_edited = utaupy.label.load(path_full_align, encoding=encoding)
+        full_align_edited.start_times = mono_align_edited.start_times
+        # full_alignを上書き
+        full_align_edited.write(path_full_align)
+
+    # 編集または時刻上書き後の full_align を読み取る
+    full_align_edited = hts.load(path_full_align).round_()
+
+    return full_align_edited
 
 
 def synthesis(config, device, label_path,
@@ -182,6 +271,10 @@ def synthesis(config, device, label_path,
             log_f0_conditioning)
         # Normalize phoneme durations
         duration_modified_labels = postprocess_duration(labels, durations, lag)
+        # NOTE: ENUNU独自機能: 外部ソフトでタイミング加工する
+        duration_modified_labels = \
+            call_external_lab_editor(config.plugin.timing_corrector,
+                                     labels, duration_modified_labels)
 
     acoustic_binary_dict, acoustic_continuous_dict, acoustic_pitch_indices, acoustic_pitch_idx \
         = load_qst(config.acoustic.question_path)
