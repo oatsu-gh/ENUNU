@@ -9,14 +9,14 @@
   - キャッシュフォルダでいいと思う。
 3. LABファイル→WAVファイル
 """
-from copy import deepcopy
 from datetime import datetime
 from os import chdir, makedirs, startfile
 from os.path import basename, dirname, exists, join, splitext
 from sys import argv
 from tempfile import mkdtemp
 
-import utaupy as up
+import colored_traceback.always  # pylint: disable=unused-import
+import utaupy
 from omegaconf import DictConfig, OmegaConf
 from utaupy.utils import hts2json, ustobj2songobj
 
@@ -36,7 +36,7 @@ except ModuleNotFoundError:
     from hts2wav import hts2wav  # pylint: disable=ungrouped-imports
 
 
-def get_project_path(utauplugin: up.utauplugin.UtauPlugin):
+def get_project_path(utauplugin: utaupy.utauplugin.UtauPlugin):
     """
     キャッシュパスとプロジェクトパスを取得する。
     """
@@ -59,9 +59,9 @@ def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None
     [#PREV] と [#NEXT] に対応させている。
     """
     # プラグイン用一時ファイルを読み取る
-    plugin = up.utauplugin.load(path_plugin_in)
+    plugin = utaupy.utauplugin.load(path_plugin_in)
     # 変換テーブルを読み取る
-    table = up.table.load(path_table, encoding='utf-8')
+    table = utaupy.table.load(path_table, encoding='utf-8')
 
     # 2ノート以上選択されているかチェックする
     if len(plugin.notes) < 2:
@@ -73,8 +73,8 @@ def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None
             note.lyric = 'R'
 
     # [#PREV] や [#NEXT] が含まれているか判定
-    prev_exists = not plugin.previous_note is None
-    next_exists = not plugin.next_note is None
+    prev_exists = plugin.previous_note is not None
+    next_exists = plugin.next_note is not None
     if prev_exists:
         plugin.notes.insert(0, plugin.previous_note)
     if next_exists:
@@ -82,13 +82,13 @@ def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None
 
     # Ust → HTSFullLabel
     song = ustobj2songobj(plugin, table)
-    full_label = up.hts.HTSFullLabel()
+    full_label = utaupy.hts.HTSFullLabel()
     full_label.song = song
     full_label.fill_contexts_from_songobj()
 
     # [#PREV] と [#NEXT] を消す前の状態での休符周辺のコンテキストを調整する
     if prev_exists or next_exists:
-        full_label = up.hts.adjust_pau_contexts(full_label, strict=strict_sinsy_style)
+        full_label = utaupy.hts.adjust_pau_contexts(full_label, strict=strict_sinsy_style)
 
     # [#PREV] のノート(の情報がある行)を削る
     if prev_exists:
@@ -122,7 +122,7 @@ def main_as_plugin(path_plugin: str) -> str:
     """
     print(f'{datetime.now()} : reading setting in ust')
     # UTAUの一時ファイルに書いてある設定を読み取る
-    plugin = up.utauplugin.load(path_plugin)
+    plugin = utaupy.utauplugin.load(path_plugin)
     path_ust, voice_dir, _ = get_project_path(plugin)
 
     path_enuconfig = join(voice_dir, 'enuconfig.yaml')
