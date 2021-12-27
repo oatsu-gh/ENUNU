@@ -1,75 +1,55 @@
-# @package _global_
 # Copyright (c) 2020 Ryuichi Yamamoto
 # Copyright (c) 2020 oatsu
-# nnsvs/nnsvs/bin/conf/synthesys 以下にあったyamlファイルをまとめたもの。
-# conf/synthesis/config.yaml から移植
 
-
-######################################
-# THIS IS SAMPLE FILE.               #
-# RENAME TO "enuconfig.yaml" TO USE. #
-######################################
-
-
-## ENUNU専用のコンフィグ
-# ENUNU用のレシピで学習したモデルかどうか
-trained_for_enunu:        true
+# Is trained with ENUNU specific recipe
+trained_for_enunu:      true
 # Table (lyric -> phonemes) file path.
-table_path:               "dic/kana2phonemes_utf8_for_oto2lab.table"
-# bit depth of output wav file.
-# 32 or 16 (recommended:32)
-bit_depth:                32
+table_path:             dic/kana2phonemes_002_oto2lab.table
 
 defaults:
-    - hydra/job_logging:  colorlog
+    - hydra/job_logging: colorlog
     - hydra/hydra_logging: colorlog
 
-verbose:                  100
+verbose:                100
 
 # Setting for output WAV file.
-sample_rate:              96000
-gain_normalize:           false
+sample_rate:            44100
+gain_normalize:         false
 
 # How was the model trained.
-frame_period:             5
-question_path:            "hed/jp_qst_crazy_mono_005-2_enunu_182D.hed"
-log_f0_conditioning:      true
+frame_period:           5
+question_path:          hed/jp_qst_crazy_mono_014_enunu_mdn_206D.hed
+log_f0_conditioning:    true
 
 # Use ground truth duration or not
 # if true, time-lag and duration models will not be used.
-ground_truth_duration:    false
+ground_truth_duration:  false
 
 
 # If not empty, try to search statisics in the directory
-stats_dir:                "dump/ofuton_p/norm"
+stats_dir:              dump/unnamed/norm
 # If not empty, try to search models in the directory
-model_dir:                "exp/ofuton_p_jp_qst_crazy_mono_005-2_enunu_182D"
-
-# conf/synthesis/acoustic/defaults.yaml から移植
+model_dir:              exp/unnamed
 acoustic:
-    question_path:        null
-    checkpoint:           "latest.pth"
-    in_scaler_path:       null
-    out_scaler_path:      null
+    question_path:      null
+    checkpoint:         best_loss.pth
+    in_scaler_path:     null
+    out_scaler_path:    null
     # model_yaml:
-    subphone_features:    coarse_coding
-    relative_f0:          true
-    post_filter:          true
+    subphone_features:  coarse_coding
+    relative_f0:        true
+    post_filter:        true
 
-
-# conf/synthesis/duration/defaults.yaml から移植
 duration:
-    checkpoint:           "best_loss.pth"
-    question_path:        null
-    in_scaler_path:       null
-    out_scaler_path:      null
+    checkpoint:         best_loss.pth
+    question_path:      null
+    in_scaler_path:     null
+    out_scaler_path:    null
 
-    
-# conf/synthesis/timelag/defaults.yaml から移植
 timelag:
-    question_path:        null
-    checkpoint:           "best_loss.pth"
-    in_scaler_path:       null
-    out_scaler_path:      null
-    allowed_range:        [-20, 20]  # in frames
-    allowed_range_rest:   [-40, 40]
+    question_path:      null
+    checkpoint:         best_loss.pth
+    in_scaler_path:     null
+    out_scaler_path:    null
+    allowed_range:      [-150, 150]
+    allowed_range_rest: [-150, 250]
