@@ -52,9 +52,10 @@ from nnsvs.bin.synthesis import maybe_set_normalization_stats_
 from nnsvs.gen import (postprocess_duration, predict_acoustic,
                        predict_duration, predict_timelag)
 from nnsvs.logger import getLogger
-from nnsvs_gen_override import gen_waveform
 from omegaconf import DictConfig, OmegaConf
 from scipy.io import wavfile
+
+from nnsvs_gen_override import gen_waveform
 
 
 def maybe_set_checkpoints_(config: DictConfig):
@@ -67,7 +68,8 @@ def maybe_set_checkpoints_(config: DictConfig):
         if config[typ].checkpoint is None:
             config[typ].checkpoint = join(model_dir, typ, 'best_loss.pth')
         else:
-            config[typ].checkpoint = join(model_dir, typ, config[typ].checkpoint)
+            config[typ].checkpoint = join(
+                model_dir, typ, config[typ].checkpoint)
 
 
 def estimate_bit_depth(wav: np.ndarray) -> str:
@@ -189,7 +191,8 @@ def call_external_lab_editor(path_editor,
         if isinstance(full_align, hts.HTSLabelFile):
             with open(path_full_align, 'w', encoding=encoding) as f:
                 f.write(str(full_align))
-            mono_align = utaupy.hts.load(str(full_align).splitlines()).as_mono()
+            mono_align = utaupy.hts.load(
+                str(full_align).splitlines()).as_mono()
             mono_align.write(path_mono_align, encoding=encoding)
         elif isinstance(full_align, utaupy.hts.HTSFullLabel):
             full_align.write(path_full_align, encoding=encoding)
@@ -212,7 +215,8 @@ def call_external_lab_editor(path_editor,
     mono_align_edited = utaupy.label.load(path_mono_align)
     # mono_align が編集されている場合は full_align に時刻を上書きする。
     if str(mono_align_edited) != str(mono_align):
-        full_align_edited = utaupy.label.load(path_full_align, encoding=encoding)
+        full_align_edited = utaupy.label.load(
+            path_full_align, encoding=encoding)
         full_align_edited.start_times = mono_align_edited.start_times
         # full_alignを上書き
         full_align_edited.write(path_full_align)
@@ -344,7 +348,8 @@ def hts2wav(config: DictConfig, label_path: str = None, out_wav_path: str = None
     timelag_model.eval()
 
     # duration
-    duration_config = OmegaConf.load(join(model_root, "duration", "model.yaml"))
+    duration_config = OmegaConf.load(
+        join(model_root, "duration", "model.yaml"))
     duration_model = hydra.utils.instantiate(duration_config.netG).to(device)
     checkpoint = torch.load(config.duration.checkpoint,
                             map_location=lambda storage,
@@ -355,7 +360,8 @@ def hts2wav(config: DictConfig, label_path: str = None, out_wav_path: str = None
     duration_model.eval()
 
     # acoustic model
-    acoustic_config = OmegaConf.load(join(model_root, "acoustic", "model.yaml"))
+    acoustic_config = OmegaConf.load(
+        join(model_root, "acoustic", "model.yaml"))
     acoustic_model = hydra.utils.instantiate(acoustic_config.netG).to(device)
     checkpoint = torch.load(config.acoustic.checkpoint,
                             map_location=lambda storage,
@@ -431,7 +437,8 @@ def main():
 
     # configファイルを読み取る
     initialize(config_path=relpath(config_path))
-    config = compose(config_name=config_name, overrides=[f'+config_path={config_path}'])
+    config = compose(config_name=config_name, overrides=[
+                     f'+config_path={config_path}'])
 
     # WAVファイル生成
     str_now = datetime.now().strftime('%Y%m%d%h%M%S')
