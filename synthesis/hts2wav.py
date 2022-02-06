@@ -437,8 +437,8 @@ def main():
 
     # configファイルを読み取る
     initialize(config_path=relpath(config_path))
-    config = compose(config_name=config_name, overrides=[
-                     f'+config_path={config_path}'])
+    config = compose(config_name=config_name,
+                     overrides=[f'+config_path={config_path}'])
 
     # WAVファイル生成
     str_now = datetime.now().strftime('%Y%m%d%h%M%S')
