@@ -89,6 +89,7 @@ def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None
     # [#PREV] と [#NEXT] を消す前の状態での休符周辺のコンテキストを調整する
     if prev_exists or next_exists:
         full_label = utaupy.hts.adjust_pau_contexts(full_label, strict=strict_sinsy_style)
+        full_label = utaupy.hts.adjust_break_contexts(full_label)
 
     # [#PREV] のノート(の情報がある行)を削る
     if prev_exists:
