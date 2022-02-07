@@ -62,7 +62,7 @@ def load_qustion(question_path, append_hat_for_LL=False) -> tuple:
     return (binary_dict, continuous_dict, pitch_indices, pitch_idx)
 
 
-def main(config: DictConfig, label_path) -> None:
+def score2timelag(config: DictConfig, label_path) -> None:
     """
     全体の処理を実行する。
     """

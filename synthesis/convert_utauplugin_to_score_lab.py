@@ -7,8 +7,8 @@ TMPファイル(UTAUプラグインに渡されるUST似のファイル) を
 import utaupy
 
 
-def ust2score(path_plugin_in, path_table, path_full_out, path_mono_out=None,
-              strict_sinsy_style=False):
+def utauplugin2score(path_plugin_in, path_table, path_full_out, path_mono_out=None,
+                     strict_sinsy_style=False):
     """
     USTじゃなくてUTAUプラグイン用に最適化する。
     ust2hts.py 中の ust2hts を改変して、
@@ -39,7 +39,7 @@ def ust2score(path_plugin_in, path_table, path_full_out, path_mono_out=None,
         plugin.notes.append(plugin.next_note)
 
     # Ust → HTSFullLabel
-    song = utaupy.ustobj2songobj(plugin, table)
+    song = utaupy.utils.ustobj2songobj(plugin, table)
     full_label = utaupy.hts.HTSFullLabel()
     full_label.song = song
     full_label.fill_contexts_from_songobj()
