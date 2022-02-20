@@ -395,7 +395,7 @@ def hts2wav(config: DictConfig, label_path: str = None, out_wav_path: str = None
         acoustic_model, acoustic_config, acoustic_in_scaler, acoustic_out_scaler)
 
     # 中間ファイル出力
-    with open(out_wav_path.replace('.wav', '_timing.lab'), 'wt') as f_lab:
+    with open(out_wav_path.replace('.wav', '_timing.lab'), 'wt', encoding='utf-8') as f_lab:
         lines = str(duration_modified_labels).splitlines()
         s = ''
         for line in lines:

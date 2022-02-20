@@ -7,8 +7,8 @@ TMPファイル(UTAUプラグインに渡されるUST似のファイル) を
 import utaupy
 
 
-def utauplugin2score(path_plugin_in, path_table, path_full_out, path_mono_out=None,
-                     strict_sinsy_style=False):
+def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None,
+                   strict_sinsy_style=False):
     """
     USTじゃなくてUTAUプラグイン用に最適化する。
     ust2hts.py 中の ust2hts を改変して、

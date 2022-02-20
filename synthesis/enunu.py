@@ -12,35 +12,41 @@
 from datetime import datetime
 from os import chdir, makedirs, startfile
 from os.path import basename, dirname, exists, join, splitext
+from shutil import copy
 from sys import argv
 from tempfile import mkdtemp
 
 import colored_traceback.always  # pylint: disable=unused-import
 import utaupy
 from omegaconf import DictConfig, OmegaConf
-from utaupy.utils import hts2json, ustobj2songobj
 
-try:
-    from hts2wav import hts2wav
-except ModuleNotFoundError:
-    print('----------------------------------------------------------')
-    print('初回起動ですね。')
-    print('PC環境に合わせてPyTorchを自動インストールします。')
-    print('インストール完了までしばらくお待ちください。')
-    print('----------------------------------------------------------')
-    from install_torch import pip_install_torch
-    pip_install_torch(join('.', 'python-3.8.10-embed-amd64', 'python.exe'))
-    print('----------------------------------------------------------')
-    print('インストール成功しました。歌声合成を始めます。')
-    print('----------------------------------------------------------\n')
-    from hts2wav import hts2wav  # pylint: disable=ungrouped-imports
+from enulib.duration import timelag2duration
+from enulib.extensions import run_extension
+from enulib.timelag import score2timelag
+from enulib.utauplugin2hts import utauplugin2hts
+
+# try:
+#     from hts2wav import hts2wav
+# except ModuleNotFoundError:
+#     print('----------------------------------------------------------')
+#     print('初回起動ですね。')
+#     print('PC環境に合わせてPyTorchを自動インストールします。')
+#     print('インストール完了までしばらくお待ちください。')
+#     print('----------------------------------------------------------')
+#     from install_torch import pip_install_torch
+#     pip_install_torch(join('.', 'python-3.8.10-embed-amd64', 'python.exe'))
+#     print('----------------------------------------------------------')
+#     print('インストール成功しました。歌声合成を始めます。')
+#     print('----------------------------------------------------------\n')
+#     from hts2wav import hts2wav  # pylint: disable=ungrouped-imports
 
 
-def get_project_path(utauplugin: utaupy.utauplugin.UtauPlugin):
+def get_project_path(path_utauplugin):
     """
     キャッシュパスとプロジェクトパスを取得する。
     """
-    setting = utauplugin.setting
+    plugin = utaupy.utauplugin.load(path_utauplugin)
+    setting = plugin.setting
     # ustのパス
     path_ust = setting.get('Project')
     # 音源フォルダ
@@ -51,141 +57,219 @@ def get_project_path(utauplugin: utaupy.utauplugin.UtauPlugin):
     return path_ust, voice_dir, cache_dir
 
 
-def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None,
-                   strict_sinsy_style=False):
+def full2mono(path_full, path_mono):
     """
-    USTじゃなくてUTAUプラグイン用に最適化する。
-    ust2hts.py 中の ust2hts を改変して、
-    [#PREV] と [#NEXT] に対応させている。
+    フルラベルをモノラベルに変換して保存する。
     """
-    # プラグイン用一時ファイルを読み取る
-    plugin = utaupy.utauplugin.load(path_plugin_in)
-    # 変換テーブルを読み取る
-    table = utaupy.table.load(path_table, encoding='utf-8')
-
-    # 2ノート以上選択されているかチェックする
-    if len(plugin.notes) < 2:
-        raise Exception('ENUNU requires at least 2 notes. / ENUNUを使うときは2ノート以上選択してください。')
-
-    # 歌詞が無いか空白のノートを休符にする。
-    for note in plugin.notes:
-        if note.lyric.strip(' 　') == '':
-            note.lyric = 'R'
-
-    # [#PREV] や [#NEXT] が含まれているか判定
-    prev_exists = plugin.previous_note is not None
-    next_exists = plugin.next_note is not None
-    if prev_exists:
-        plugin.notes.insert(0, plugin.previous_note)
-    if next_exists:
-        plugin.notes.append(plugin.next_note)
-
-    # Ust → HTSFullLabel
-    song = ustobj2songobj(plugin, table)
-    full_label = utaupy.hts.HTSFullLabel()
-    full_label.song = song
-    full_label.fill_contexts_from_songobj()
-
-    # [#PREV] と [#NEXT] を消す前の状態での休符周辺のコンテキストを調整する
-    if prev_exists or next_exists:
-        full_label = utaupy.hts.adjust_pau_contexts(full_label, strict=strict_sinsy_style)
-        full_label = utaupy.hts.adjust_break_contexts(full_label)
-
-    # [#PREV] のノート(の情報がある行)を削る
-    if prev_exists:
-        target_note = full_label[0].note
-        while full_label[0].note is target_note:
-            del full_label[0]
-        # PREVを消しても前のノート分ずれているので、最初の音素開始時刻が0になるようにする。
-        # ずれを取得
-        offset = full_label[0].start
-        # 全音素の開始と終了時刻をずらす
-        for oneline in full_label:
-            oneline.start -= offset
-            oneline.end -= offset
-    # [#NEXT] のノート(の情報がある行)を削る
-    if next_exists:
-        target_note = full_label[-1].note
-        while full_label[-1].note is target_note:
-            del full_label[-1]
-
-    # ファイル出力
-    s = '\n'.join(list(map(str, full_label)))
-    with open(path_full_out, mode='w', encoding='utf-8') as f:
-        f.write(s)
-    if path_mono_out is not None:
-        full_label.as_mono().write(path_mono_out)
+    full_label = utaupy.hts.load(path_full)
+    mono_label = full_label.as_mono()
+    mono_label.write(path_mono)
 
 
 def main_as_plugin(path_plugin: str) -> str:
     """
     UtauPluginオブジェクトから音声ファイルを作る
     """
-    print(f'{datetime.now()} : reading setting in ust')
     # UTAUの一時ファイルに書いてある設定を読み取る
-    plugin = utaupy.utauplugin.load(path_plugin)
-    path_ust, voice_dir, _ = get_project_path(plugin)
-
+    print(f'{datetime.now()} : reading setting in TMP')
+    path_ust, voice_dir, _ = get_project_path(path_plugin)
     path_enuconfig = join(voice_dir, 'enuconfig.yaml')
+
+    # configファイルがあるか調べて、なければ例外処理
     if not exists(path_enuconfig):
         raise Exception(
             '音源フォルダに enuconfig.yaml が見つかりません。'
             'UTAU音源選択でENUNU用モデルを指定してください。'
         )
-
     # カレントディレクトリを音源フォルダに変更する
     chdir(voice_dir)
+
     # configファイルを読み取る
     print(f'{datetime.now()} : reading enuconfig')
     config = DictConfig(OmegaConf.load(path_enuconfig))
 
+    # 日付時刻を取得
+    str_now = datetime.now().strftime('%Y%m%d_%H%M%S')
     # 入出力パスを設定する
     if path_ust is not None:
-        songname = f"{splitext(basename(path_ust))[0]}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        out_dir = join(dirname(path_ust), songname)
+        songname = splitext(basename(path_ust))[0]
+        out_dir = dirname(path_ust)
+        temp_dir = join(out_dir, f'{songname}_enutemp')
     # USTが未保存の場合
     else:
         print('USTが保存されていないので一時フォルダにWAV出力します。')
-        songname = f"temp__{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        out_dir = mkdtemp(prefix='enunu-')
+        songname = f"temp__{str_now}"
+        temp_dir = mkdtemp(prefix='enunu-')
+        out_dir = temp_dir
 
-    # 出力フォルダがなければつくる
-    makedirs(out_dir, exist_ok=True)
-
+    # 一時出力フォルダがなければつくる
+    makedirs(temp_dir, exist_ok=True)
     # 各種出力ファイルのパスを設定
-    path_full_score_lab = join(out_dir, f'{songname}_full_score.lab')
-    path_mono_score_lab = join(out_dir, f'{songname}_mono_score.lab')
-    path_json = join(out_dir, f'{songname}_full_score.json')
-    path_wav = join(out_dir, f'{songname}.wav')
-    path_ust_out = join(out_dir, f'{songname}.ust')
+    path_temp_ust = join(temp_dir, 'temp.ust')
+    path_full_score = join(temp_dir, 'score.full')
+    path_mono_score = join(temp_dir, 'score.lab')
+    path_full_timelag = join(temp_dir, 'timelag.full')
+    path_mono_timelag = join(temp_dir, 'timelag.lab')
+    path_full_duration = join(temp_dir, 'duration.full')
+    path_mono_duration = join(temp_dir, 'duration.lab')
+    path_full_timing = join(temp_dir, 'timing.full')
+    path_mono_timing = join(temp_dir, 'timing.lab')
+    path_f0 = join(temp_dir, 'acoustic.f0')
+    path_bap = join(temp_dir, 'acoustic.bap')
+    path_mgc = join(temp_dir, 'acoustic.mgc')
+    path_wav = join(out_dir, f'{songname}__{str_now}.wav')
 
-    # フルラベル生成
-    print(f'{datetime.now()} : converting TMP to LAB')
+    # USTを一時フォルダに複製
+    print(f'{datetime.now()} : copying UST(for UTAU-plugins)')
+    copy(path_plugin, path_temp_ust)
+
+    # USTを事前加工
+    ust_editor = config.get('ust_editor')
+    if ust_editor is not None:
+        print(f'{datetime.now()} : editing UST(for UTAU-plugins) with {ust_editor}')
+        run_extension(
+            ust_editor,
+            ust=path_temp_ust
+        )
+
+    # フルラベル(score)生成
+    print(f'{datetime.now()} : converting UST(for UTAU-plugins) to LAB(score)')
     utauplugin2hts(
-        path_plugin,
+        path_temp_ust,
         config.table_path,
-        path_full_score_lab,
-        path_mono_out=path_mono_score_lab,
+        path_full_score,
+        path_mono_out=path_mono_score,
         strict_sinsy_style=(not config.trained_for_enunu)
     )
 
-    # ファイル処理
-    # 選択範囲のUSTを出力(musicxml用)
-    print(f'{datetime.now()} : exporting UST')
-    new_ust = plugin.as_ust()
-    for note in new_ust.notes:
-        # 基本情報以外を削除
-        note.suppin()
-        # 歌詞がないノートを休符にする
-        if note.lyric.strip(' 　') == '':
-            note.lyric = 'R'
-    new_ust.write(path_ust_out)
+    # フルラベル(score)を加工
+    editor = config.get('score_editor')
+    if editor is not None:
+        print(f'{datetime.now()} : editing score with {editor}')
+        full2mono(path_full_score, path_mono_score)
+        run_extension(
+            editor,
+            ust=path_temp_ust,
+            full_score=path_full_score,
+            mono_score=path_mono_score
+        )
 
-    print(f'{datetime.now()} : converting LAB to JSON')
-    hts2json(path_full_score_lab, path_json)
-    print(f'{datetime.now()} : converting LAB to WAV')
-    hts2wav(config, path_full_score_lab, path_wav)
-    print(f'{datetime.now()} : generating WAV ({path_wav})')
+    # フルラベル(timelag)を生成: score.full -> timelag.full
+    print(f'{datetime.now()} : converting TMP to LAB(timelag)')
+    score2timelag(config, path_full_score, path_full_timelag)
+
+    # フルラベル(timelag)を加工: timelag.full -> timelag.full
+    editor = config.get('timelag_editor')
+    if editor is not None:
+        print(f'{datetime.now()} : editing timelag with {editor}')
+        run_extension(
+            editor,
+            ust=path_temp_ust,
+            full_score=path_full_score,
+            mono_score=path_mono_score,
+            full_timelag=path_full_timelag,
+            mono_timelag=path_mono_timelag
+        )
+
+    # フルラベル(duration) を生成 score.full & timelag.full -> duration.full
+    print(f'{datetime.now()} : predicting Timelag features')
+    timelag2duration(config, path_full_score, path_full_timelag)
+
+    # フルラベル(duration)を加工: duration.full -> duration.full
+    editor = config.get('duration_editor')
+    if editor is not None:
+        print(f'{datetime.now()} : editing duration with {editor}')
+        run_extension(
+            editor,
+            ust=path_temp_ust,
+            full_score=path_full_score,
+            mono_score=path_mono_score,
+            full_timelag=path_full_timelag,
+            mono_timelag=path_mono_timelag,
+            full_duration=path_full_duration,
+            mono_duration=path_mono_duration
+        )
+
+    # フルラベル(timing) を生成 timelag.full & duration.full -> timing.full
+    print(f'{datetime.now()} : generationg LAB(timing)')
+    duration2timing(config, path_full_score,
+                    path_full_timelag, path_full_duration)
+
+    # フルラベル(timing) を加工: timing.full -> timing.full
+    editor = config.get('timing_editor')
+    if editor is not None:
+        print(f'{datetime.now()} : editing timing with {editor}')
+        run_extension(
+            editor,
+            ust=path_temp_ust,
+            full_score=path_full_score,
+            mono_score=path_mono_score,
+            full_timelag=path_full_timelag,
+            mono_timelag=path_mono_timelag,
+            full_duration=path_full_duration,
+            mono_duration=path_mono_duration,
+            full_timing=path_full_timing,
+            mono_timing=path_mono_timing
+        )
+
+    # 音響パラメータを推定 timing.full -> f0, bap, mgc
+    print(f'{datetime.now()} : predicting acoustic features')
+    timing2acoustic(config, path_full_timing, path_f0, path_bap, path_mgc)
+
+    # 音響パラメータを加工: timing.full -> timing.full
+    editor = config.get('acoustic_editor')
+    if editor is not None:
+        print(f'{datetime.now()} : editing acoustic with {editor}')
+        run_extension(
+            editor,
+            ust=path_temp_ust,
+            full_score=path_full_score,
+            mono_score=path_mono_score,
+            full_timelag=path_full_timelag,
+            mono_timelag=path_mono_timelag,
+            full_duration=path_full_duration,
+            mono_duration=path_mono_duration,
+            full_timing=path_full_timing,
+            mono_timing=path_mono_timing,
+            f0=path_f0,
+            bap=path_bap,
+            mgc=path_mgc
+        )
+
+    # WORLDを使って音声ファイルを生成: f0, bap, mgc -> <songname>.wav
+    print(f'{datetime.now()} : synthesizing WAV')
+    acoustic2wav(
+        config,
+        path_wav,
+        path_f0=path_f0,
+        path_bap=path_bap,
+        path_mgc=path_bap
+    )
+
+    # 音声ファイルを加工: <songname>.wav -> <songname>.wav
+    editor = config.get('wav_editor')
+    if editor is not None:
+        print(f'{datetime.now()} : editing WAV with {editor}')
+        run_extension(
+            editor,
+            ust=path_temp_ust,
+            full_score=path_full_score,
+            mono_score=path_mono_score,
+            full_timelag=path_full_timelag,
+            mono_timelag=path_mono_timelag,
+            full_duration=path_full_duration,
+            mono_duration=path_mono_duration,
+            full_timing=path_full_timing,
+            mono_timing=path_mono_timing,
+            f0=path_f0,
+            bap=path_bap,
+            mgc=path_mgc,
+            wav=path_wav
+        )
+
+    # print(f'{datetime.now()} : converting LAB to JSON')
+    # hts2json(path_full_score, path_json)
+
     # Windowsの時は音声を再生する。
     startfile(path_wav)
 
@@ -207,8 +291,8 @@ if __name__ == '__main__':
     print('_____ξ ・ヮ・)ξ < ENUNU v0.2.5 ________')
     print(f'argv: {argv}')
     if len(argv) == 2:
-        path_utauplugin = argv[1]
+        main(argv[1])
     elif len(argv) == 1:
-        path_utauplugin = \
-            input('Input file path of TMP(plugin)\n>>> ').strip('"')
-    main(path_utauplugin)
+        main(input('Input file path of TMP(plugin)\n>>> ').strip('"'))
+    else:
+        raise Exception('引数が多すぎます。')

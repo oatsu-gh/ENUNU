@@ -4,8 +4,6 @@
 full_score ラベルをもとに、NNSVSモデルを用いてtimelagを計算する。
 timelag.labとして結果を出力する。
 """
-from os.path import join
-
 import hydra
 import joblib
 import numpy as np
@@ -16,53 +14,13 @@ from nnsvs.gen import predict_timelag
 from nnsvs.logger import getLogger
 from omegaconf import DictConfig, OmegaConf
 
+from enulib.common import (ndarray_as_labels, set_checkpoint,
+                           set_normalization_stat)
+
 logger = None
 
 
-def set_checkpoint(config: DictConfig, typ: str):
-    """
-    使うモデルを指定する。
-    """
-    if config.model_dir is None:
-        raise ValueError('"model_dir" config is required')
-    typ = 'timelag'
-    model_dir = to_absolute_path(config.model_dir)
-    # config.timelagに項目を追加
-    config[typ].model_yaml = \
-        join(model_dir, typ, 'model.yaml')
-    config[typ].checkpoint = \
-        join(model_dir, typ, config.model_checkpoint)
-    # hts2wav.pyだとこうしてた↓
-    # config[typ].checkpoint = join(model_dir, typ, config[typ].checkpoint)
-
-
-def set_normalization_stat(config: DictConfig, typ: str):
-    """
-    何してるのかわからないけどconfigを上書きする。
-    """
-    if config.stats_dir is None:
-        raise ValueError('"stats_dir" config is required')
-    stats_dir = to_absolute_path(config.stats_dir)
-    # config.timelagに項目を追加
-    config[typ].in_scaler_path = \
-        join(stats_dir, f'in_{typ}_scaler.joblib')
-    config[typ].out_scaler_path = \
-        join(stats_dir, f'out_{typ}_scaler.joblib')
-
-
-def load_qustion(question_path, append_hat_for_LL=False) -> tuple:
-    """
-    question.hed ファイルを読み取って、
-    binary_dict, continuous_dict, pitch_idx, pitch_indices を返す。
-    """
-    binary_dict, continuous_dict = hts.load_question_set(
-        question_path, append_hat_for_LL=append_hat_for_LL)
-    pitch_indices = np.arange(len(binary_dict), len(binary_dict) + 3)
-    pitch_idx = len(binary_dict) + 1
-    return (binary_dict, continuous_dict, pitch_indices, pitch_idx)
-
-
-def score2timelag(config: DictConfig, label_path) -> None:
+def score2timelag(config: DictConfig, label_path, timelag_path):
     """
     全体の処理を実行する。
     """
@@ -84,18 +42,15 @@ def score2timelag(config: DictConfig, label_path) -> None:
     set_normalization_stat(config, typ)
 
     # 各種設定を読み込む
-    timelag_config = \
-        OmegaConf.load(to_absolute_path(config.timelag.model_yaml))
-    timelag_model = \
-        hydra.utils.instantiate(timelag_config.netG).to(device)
-    checkpoint = \
-        torch.load(config.timelag.checkpoint,
-                   map_location=lambda storage,
-                   loc: storage)
-    timelag_model.load_state_dict(checkpoint['state_dict'])
-    timelag_in_scaler = joblib.load(config[typ].in_scaler_path)
-    timelag_out_scaler = joblib.load(config[typ].out_scaler_path)
-    timelag_model.eval()
+    model_config = OmegaConf.load(to_absolute_path(config[typ].model_yaml))
+    model = hydra.utils.instantiate(model_config.netG).to(device)
+    checkpoint = torch.load(config.timelag.checkpoint,
+                            map_location=lambda storage,
+                            loc: storage)
+    model.load_state_dict(checkpoint['state_dict'])
+    in_scaler = joblib.load(config[typ].in_scaler_path)
+    out_scaler = joblib.load(config[typ].out_scaler_path)
+    model.eval()
     # -----------------------------------------------------
     # ここまで nnsvs.bin.synthesis.my_app() の内容 --------
     # -----------------------------------------------------
@@ -117,7 +72,7 @@ def score2timelag(config: DictConfig, label_path) -> None:
     binary_dict, continuous_dict = \
         hts.load_question_set(question_path, append_hat_for_LL=False)
     # pitch indices in the input features
-    pitch_idx = len(binary_dict) + 1
+    # pitch_idx = len(binary_dict) + 1
     pitch_indices = np.arange(len(binary_dict), len(binary_dict)+3)
 
     # f0の設定を読み取る。
@@ -128,10 +83,10 @@ def score2timelag(config: DictConfig, label_path) -> None:
     lag = predict_timelag(
         device,
         labels,
-        timelag_model,
-        timelag_config,
-        timelag_in_scaler,
-        timelag_out_scaler,
+        model,
+        model_config,
+        in_scaler,
+        out_scaler,
         binary_dict,
         continuous_dict,
         pitch_indices,
@@ -141,5 +96,8 @@ def score2timelag(config: DictConfig, label_path) -> None:
     # -----------------------------------------------------
     # ここまで nnsvs.bin.synthesis.synthesis() の内容 -----
     # -----------------------------------------------------
-    print(type(lag))
-    print(lag)
+    # TODO: ここの出力形式をモノラベルかフルラベルにする。
+    timelag_labels = ndarray_as_labels(lag, labels)
+    print(timelag_labels)
+    with open(timelag_path, 'w', encoding='utf-8') as f:
+        f.write(str(timelag_labels))
