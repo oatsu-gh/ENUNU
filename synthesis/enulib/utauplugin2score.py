@@ -7,8 +7,8 @@ TMPファイル(UTAUプラグインに渡されるUST似のファイル) を
 import utaupy
 
 
-def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None,
-                   strict_sinsy_style=False):
+def utauplugin2score(path_plugin_in, path_table, path_full_out, path_mono_out=None,
+                     strict_sinsy_style=False):
     """
     USTじゃなくてUTAUプラグイン用に最適化する。
     ust2hts.py 中の ust2hts を改変して、
@@ -72,5 +72,11 @@ def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None
     s = '\n'.join(list(map(str, full_label)))
     with open(path_full_out, mode='w', encoding='utf-8') as f:
         f.write(s)
+    # 5msで丸めて上書き
+    temp_labobj = utaupy.label.load(path_full_out)
+    temp_labobj.round(50000)
+    temp_labobj.write(path_full_out)
     if path_mono_out is not None:
-        full_label.as_mono().write(path_mono_out)
+        temp_labobj = full_label.as_mono()
+        temp_labobj.round(50000)
+        temp_labobj.write(path_mono_out)
