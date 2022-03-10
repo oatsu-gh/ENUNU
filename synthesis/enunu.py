@@ -11,7 +11,7 @@
 """
 from datetime import datetime
 from os import chdir, makedirs, startfile
-from os.path import basename, dirname, exists, join, splitext
+from os.path import basename, dirname, exists, join, split, splitext
 from sys import argv
 from tempfile import mkdtemp
 
@@ -116,7 +116,7 @@ def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None
         full_label.as_mono().write(path_mono_out)
 
 
-def main_as_plugin(path_plugin: str) -> str:
+def main_as_plugin(path_plugin: str, path_output: str) -> str:
     """
     UtauPluginオブジェクトから音声ファイルを作る
     """
@@ -139,7 +139,10 @@ def main_as_plugin(path_plugin: str) -> str:
     config = DictConfig(OmegaConf.load(path_enuconfig))
 
     # 入出力パスを設定する
-    if path_ust is not None:
+    if path_output is not None:
+        out_dir, songname = split(path_output)
+        songname = splitext(songname)[0]
+    elif path_ust is not None:
         songname = f"{splitext(basename(path_ust))[0]}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
         out_dir = join(dirname(path_ust), songname)
     # USTが未保存の場合
@@ -186,18 +189,19 @@ def main_as_plugin(path_plugin: str) -> str:
     hts2wav(config, path_full_score_lab, path_wav)
     print(f'{datetime.now()} : generating WAV ({path_wav})')
     # Windowsの時は音声を再生する。
-    startfile(path_wav)
+    if path_output is None:
+        startfile(path_wav)
 
     return path_wav
 
 
-def main(path: str):
+def main(path: str, path_output: str):
     """
     入力ファイルによって処理を分岐する。
     """
     # logging.basicConfig(level=logging.INFO)
     if path.endswith('.tmp'):
-        main_as_plugin(path)
+        main_as_plugin(path, path_output)
     else:
         raise ValueError('Input file must be TMP(plugin).')
 
@@ -205,9 +209,13 @@ def main(path: str):
 if __name__ == '__main__':
     print('_____ξ ・ヮ・)ξ < ENUNU v0.2.5 ________')
     print(f'argv: {argv}')
-    if len(argv) == 2:
+    if len(argv) == 3:
         path_utauplugin = argv[1]
+        path_output = argv[2]
+    elif len(argv) == 2:
+        path_utauplugin = argv[1]
+        path_output = None
     elif len(argv) == 1:
         path_utauplugin = \
             input('Input file path of TMP(plugin)\n>>> ').strip('"')
-    main(path_utauplugin)
+    main(path_utauplugin, path_output)
