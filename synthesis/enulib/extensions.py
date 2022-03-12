@@ -7,6 +7,7 @@ ENUNUで外部ツールを呼び出すときに必要な関数とか
 import subprocess
 from os import getcwd
 from os.path import abspath, basename, dirname, exists, isfile, splitext
+from pprint import pprint
 from sys import executable
 from typing import Union
 
@@ -129,6 +130,6 @@ def run_extension(path=None, **kwargs):
 
     # 拡張機能を呼び出す。
     print("----------------------------")
-    print(args)
+    pprint(args)
     subprocess.run(args, cwd=dirname(path.strip('\'"')), check=True)
     print("----------------------------")
