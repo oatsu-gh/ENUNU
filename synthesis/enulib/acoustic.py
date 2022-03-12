@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2022 oatsu
 """
-full_score ラベルと timelag データをもとに、NNSVSモデルを用いてdurationを計算する。
+発声タイミングの情報を持ったフルラベルから、WORLD用の音響特長量を推定する。
 """
 import hydra
 import joblib
@@ -9,19 +9,18 @@ import numpy as np
 import torch
 from hydra.utils import to_absolute_path
 from nnmnkwii.io import hts
-from nnsvs.gen import predict_duration
+from nnsvs.gen import predict_acoustic
 from nnsvs.logger import getLogger
 from omegaconf import DictConfig, OmegaConf
 
-from enulib.common import (ndarray_as_labels, set_checkpoint,
-                           set_normalization_stat)
+from enulib.common import set_checkpoint, set_normalization_stat
 
 logger = None
 
 
-def score2duration(config: DictConfig, score_path, timelag_path, duration_path):
+def timing2acoustic(config: DictConfig, timing_path, acoustic_path):
     """
-    full_score と timelag ラベルから durationラベルを生成する。
+    フルラベルを読み取って、音響特長量のファイルを出力する。
     """
     # -----------------------------------------------------
     # ここから nnsvs.bin.synthesis.my_app() の内容 --------
@@ -31,7 +30,7 @@ def score2duration(config: DictConfig, score_path, timelag_path, duration_path):
     logger = getLogger(config.verbose)
     logger.info(OmegaConf.to_yaml(config))
 
-    typ = 'duration'
+    typ = 'acoustic'
     # CUDAが使えるかどうか
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -43,9 +42,12 @@ def score2duration(config: DictConfig, score_path, timelag_path, duration_path):
     # 各種設定を読み込む
     model_config = OmegaConf.load(to_absolute_path(config[typ].model_yaml))
     model = hydra.utils.instantiate(model_config.netG).to(device)
-    checkpoint = torch.load(config[typ].checkpoint,
-                            map_location=lambda storage,
-                            loc: storage)
+    checkpoint = torch.load(
+        config[typ].checkpoint,
+        map_location=lambda storage,
+        loc: storage
+    )
+
     model.load_state_dict(checkpoint['state_dict'])
     in_scaler = joblib.load(config[typ].in_scaler_path)
     out_scaler = joblib.load(config[typ].out_scaler_path)
@@ -58,9 +60,7 @@ def score2duration(config: DictConfig, score_path, timelag_path, duration_path):
     # ここから nnsvs.bin.synthesis.synthesis() の内容 -----
     # -----------------------------------------------------
     # full_score_lab を読み取る。
-    labels = hts.load(score_path).round_()
-    # いまのduraitonモデルだと使わない
-    # timelag = hts.load(timelag_path).round_()
+    duration_modified_labels = hts.load(timing_path).round_()
 
     # hedファイルを読み取る。
     question_path = to_absolute_path(config.question_path)
@@ -70,39 +70,31 @@ def score2duration(config: DictConfig, score_path, timelag_path, duration_path):
     #     config[typ].question_path = config.question_path
     # --------------------------------------
     # hedファイルを辞書として読み取る。
-    binary_dict, continuous_dict = \
-        hts.load_question_set(question_path, append_hat_for_LL=False)
+    binary_dict, continuous_dict = hts.load_question_set(
+        question_path, append_hat_for_LL=False)
     # pitch indices in the input features
     # pitch_idx = len(binary_dict) + 1
     pitch_indices = np.arange(len(binary_dict), len(binary_dict)+3)
 
     # f0の設定を読み取る。
     log_f0_conditioning = config.log_f0_conditioning
-
-    # durationモデルを適用
-    duration = predict_duration(
+    acoustic_features = predict_acoustic(
         device,
-        labels,
+        duration_modified_labels,
         model,
         model_config,
         in_scaler,
         out_scaler,
-        None,
         binary_dict,
         continuous_dict,
+        config.acoustic.subphone_features,
         pitch_indices,
         log_f0_conditioning
     )
-    # -----------------------------------------------------
-    # ここまで nnsvs.bin.synthesis.synthesis() の内容 -----
-    # -----------------------------------------------------
 
-    # durationはtimelagと違って、
-    # 100nsではなくサンプル数(5msごとに1サンプル)なので、
-    # フォーマットを統一するために100ns表記に変換する。
-    # NOTE: 5msじゃない学習をするようになったら直さないといけない。
-    duration_100ns = duration * 50000
-    # フルラベルとして出力する
-    duration_labels = ndarray_as_labels(duration_100ns, labels)
-    with open(duration_path, 'w', encoding='utf-8') as f:
-        f.write(str(duration_labels))
+    # csvファイルとしてAcousticの行列を出力
+    np.savetxt(
+        acoustic_path,
+        acoustic_features,
+        delimiter=','
+    )

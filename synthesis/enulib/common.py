@@ -40,7 +40,6 @@ def set_checkpoint(config: DictConfig, typ: str):
     """
     if config.model_dir is None:
         raise ValueError('"model_dir" config is required')
-    typ = 'timelag'
     model_dir = to_absolute_path(config.model_dir)
     # config.timelagに項目を追加
     config[typ].model_yaml = \

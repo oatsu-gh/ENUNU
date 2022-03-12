@@ -20,10 +20,17 @@ import colored_traceback.always  # pylint: disable=unused-import
 import utaupy
 from omegaconf import DictConfig, OmegaConf
 
-from enulib.duration import timelag2duration
-from enulib.extensions import run_extension
+from enulib.acoustic import timing2acoustic
+from enulib.duration import score2duration
+from enulib.extensions import (merge_full_contexts_change_to_mono,
+                               merge_full_time_change_to_mono,
+                               merge_mono_contexts_change_to_full,
+                               merge_mono_time_change_to_full, run_extension,
+                               str_has_been_changed)
 from enulib.timelag import score2timelag
-from enulib.utauplugin2hts import utauplugin2hts
+from enulib.timing import generate_timing_label
+from enulib.utauplugin2score import utauplugin2score
+from enulib.world import acoustic2wav
 
 # try:
 #     from hts2wav import hts2wav
@@ -114,16 +121,17 @@ def main_as_plugin(path_plugin: str) -> str:
     path_mono_duration = join(temp_dir, 'duration.lab')
     path_full_timing = join(temp_dir, 'timing.full')
     path_mono_timing = join(temp_dir, 'timing.lab')
-    path_f0 = join(temp_dir, 'acoustic.f0')
-    path_bap = join(temp_dir, 'acoustic.bap')
-    path_mgc = join(temp_dir, 'acoustic.mgc')
+    path_acoustic = join(temp_dir, 'acoustic.csv')
+    path_f0 = join(temp_dir, 'world.f0')
+    path_bap = join(temp_dir, 'world.bap')
+    path_mgc = join(temp_dir, 'world.mgc')
     path_wav = join(out_dir, f'{songname}__{str_now}.wav')
 
     # USTを一時フォルダに複製
     print(f'{datetime.now()} : copying UST(for UTAU-plugins)')
     copy(path_plugin, path_temp_ust)
 
-    # USTを事前加工
+    # USTを事前加工------------------------------------------------------------------
     ust_editor = config.get('ust_editor')
     if ust_editor is not None:
         print(f'{datetime.now()} : editing UST(for UTAU-plugins) with {ust_editor}')
@@ -132,36 +140,66 @@ def main_as_plugin(path_plugin: str) -> str:
             ust=path_temp_ust
         )
 
-    # フルラベル(score)生成
+    # フルラベル(score)生成----------------------------------------------------------
     print(f'{datetime.now()} : converting UST(for UTAU-plugins) to LAB(score)')
-    utauplugin2hts(
+    utauplugin2score(
         path_temp_ust,
         config.table_path,
         path_full_score,
         path_mono_out=path_mono_score,
         strict_sinsy_style=(not config.trained_for_enunu)
     )
+    # full_score から mono_score を生成
+    full2mono(path_full_score, path_mono_score)
 
-    # フルラベル(score)を加工
+    # フルラベル(score)を加工-------------------------------------------------------
     editor = config.get('score_editor')
     if editor is not None:
         print(f'{datetime.now()} : editing score with {editor}')
-        full2mono(path_full_score, path_mono_score)
+        # 変更前のモノラベルを読んでおく
+        with open(path_mono_timelag, encoding='utf-8') as f:
+            str_mono_old = f.read()
+        # 外部ソフトを実行
         run_extension(
             editor,
             ust=path_temp_ust,
             full_score=path_full_score,
             mono_score=path_mono_score
         )
+        # 変更後のモノラベルを読む
+        with open(path_mono_timelag, encoding='utf-8') as f:
+            str_mono_new = f.read()
+       # モノラベルの時刻が変わっていたらフルラベルに転写して、
+        # そうでなければフルラベルの時刻をモノラベルに転写する。
+        # NOTE: 歌詞が変更されていると思って処理する。
+        if str_has_been_changed(str_mono_old, str_mono_new):
+            merge_mono_time_change_to_full(
+                path_mono_score, path_full_score)
+            merge_mono_contexts_change_to_full(
+                path_mono_score, path_full_score)
+        else:
+            merge_full_time_change_to_mono(
+                path_full_score, path_mono_score)
+            merge_full_contexts_change_to_mono(
+                path_full_timelag, path_mono_timelag)
 
-    # フルラベル(timelag)を生成: score.full -> timelag.full
-    print(f'{datetime.now()} : converting TMP to LAB(timelag)')
-    score2timelag(config, path_full_score, path_full_timelag)
+    # フルラベル(timelag)を生成: score.full -> timelag.full-----------------------
+    print(f'{datetime.now()} : predicting timelag features')
+    score2timelag(
+        config,
+        path_full_score,
+        path_full_timelag
+    )
+    # full_timelag から mono_timelag を生成
+    full2mono(path_full_timelag, path_mono_timelag)
 
-    # フルラベル(timelag)を加工: timelag.full -> timelag.full
+    # フルラベル(timelag)を加工: timelag.full -> timelag.full---------------------
     editor = config.get('timelag_editor')
     if editor is not None:
         print(f'{datetime.now()} : editing timelag with {editor}')
+        # 変更前のモノラベルを読んでおく
+        with open(path_mono_timelag, encoding='utf-8') as f:
+            str_mono_old = f.read()
         run_extension(
             editor,
             ust=path_temp_ust,
@@ -170,15 +208,38 @@ def main_as_plugin(path_plugin: str) -> str:
             full_timelag=path_full_timelag,
             mono_timelag=path_mono_timelag
         )
+        # 変更後のモノラベルを読む
+        with open(path_mono_timelag, encoding='utf-8') as f:
+            str_mono_new = f.read()
+        # モノラベルの時刻が変わっていたらフルラベルに転写して、
+        # そうでなければフルラベルの時刻をモノラベルに転写する。
+        # NOTE: 歌詞は編集していないと信じて処理する。
+        if str_has_been_changed(str_mono_old, str_mono_new):
+            merge_mono_time_change_to_full(
+                path_mono_timelag, path_full_timelag)
+        else:
+            merge_full_time_change_to_mono(
+                path_full_timelag, path_mono_timelag)
 
-    # フルラベル(duration) を生成 score.full & timelag.full -> duration.full
-    print(f'{datetime.now()} : predicting Timelag features')
-    timelag2duration(config, path_full_score, path_full_timelag)
+    # フルラベル(duration) を生成 score.full & timelag.full -> duration.full-----
+    print(f'{datetime.now()} : predicting duration features')
+    score2duration(
+        config,
+        path_full_score,
+        path_full_timelag,
+        path_full_duration
+    )
+    # full_duration から mono_duration を生成
+    full2mono(path_full_duration, path_mono_duration)
 
-    # フルラベル(duration)を加工: duration.full -> duration.full
+    # フルラベル(duration)を加工: duration.full -> duration.full-----------------
     editor = config.get('duration_editor')
     if editor is not None:
         print(f'{datetime.now()} : editing duration with {editor}')
+        # 変更前のモノラベルを読んでおく
+        with open(path_mono_duration, encoding='utf-8') as f:
+            str_mono_old = f.read()
+        # 外部ソフトでdurationを編集する
         run_extension(
             editor,
             ust=path_temp_ust,
@@ -189,16 +250,37 @@ def main_as_plugin(path_plugin: str) -> str:
             full_duration=path_full_duration,
             mono_duration=path_mono_duration
         )
+        # 変更後のモノラベルを読む
+        with open(path_mono_duration, encoding='utf-8') as f:
+            str_mono_new = f.read()
+        # モノラベルの時刻が変わっていたらフルラベルに転写して、
+        # そうでなければフルラベルの時刻をモノラベルに転写する。
+        # NOTE: 歌詞は編集していないという前提で処理する。
+        if str_has_been_changed(str_mono_old, str_mono_new):
+            merge_mono_time_change_to_full(
+                path_mono_duration, path_full_duration)
+        else:
+            merge_full_time_change_to_mono(
+                path_full_duration, path_mono_duration)
 
-    # フルラベル(timing) を生成 timelag.full & duration.full -> timing.full
+    # フルラベル(timing) を生成 timelag.full & duration.full -> timing.full------
     print(f'{datetime.now()} : generationg LAB(timing)')
-    duration2timing(config, path_full_score,
-                    path_full_timelag, path_full_duration)
+    generate_timing_label(
+        path_full_score,
+        path_full_timelag,
+        path_full_duration,
+        path_full_timing
+    )
+    # timingのモノラベルも生成
+    full2mono(path_full_timing, path_mono_timing)
 
-    # フルラベル(timing) を加工: timing.full -> timing.full
+    # フルラベル(timing) を加工: timing.full -> timing.full----------------------
     editor = config.get('timing_editor')
     if editor is not None:
         print(f'{datetime.now()} : editing timing with {editor}')
+        # 変更前のモノラベルを読んでおく
+        with open(path_mono_duration, encoding='utf-8') as f:
+            str_mono_old = f.read()
         run_extension(
             editor,
             ust=path_temp_ust,
@@ -211,12 +293,24 @@ def main_as_plugin(path_plugin: str) -> str:
             full_timing=path_full_timing,
             mono_timing=path_mono_timing
         )
+        # 変更後のモノラベルを読む
+        with open(path_mono_duration, encoding='utf-8') as f:
+            str_mono_new = f.read()
+        # モノラベルの時刻が変わっていたらフルラベルに転写して、
+        # そうでなければフルラベルの時刻をモノラベルに転写する。
+        # NOTE: 歌詞は編集していないという前提で処理する。
+        if str_has_been_changed(str_mono_old, str_mono_new):
+            merge_mono_time_change_to_full(
+                path_mono_timing, path_full_timing)
+        else:
+            merge_full_time_change_to_mono(
+                path_full_timing, path_mono_timing)
 
-    # 音響パラメータを推定 timing.full -> f0, bap, mgc
+    # 音響パラメータを推定 timing.full -> acoustic---------------------------
     print(f'{datetime.now()} : predicting acoustic features')
-    timing2acoustic(config, path_full_timing, path_f0, path_bap, path_mgc)
+    timing2acoustic(config, path_full_timing, path_acoustic)
 
-    # 音響パラメータを加工: timing.full -> timing.full
+    # 音響パラメータを加工: acoustic.csv -> acoustic.csv-------------------------
     editor = config.get('acoustic_editor')
     if editor is not None:
         print(f'{datetime.now()} : editing acoustic with {editor}')
@@ -236,14 +330,13 @@ def main_as_plugin(path_plugin: str) -> str:
             mgc=path_mgc
         )
 
-    # WORLDを使って音声ファイルを生成: f0, bap, mgc -> <songname>.wav
+    # WORLDを使って音声ファイルを生成: acoustic.csv -> <songname>.wav
     print(f'{datetime.now()} : synthesizing WAV')
     acoustic2wav(
         config,
-        path_wav,
-        path_f0=path_f0,
-        path_bap=path_bap,
-        path_mgc=path_bap
+        path_full_timing,
+        path_acoustic,
+        path_wav
     )
 
     # 音声ファイルを加工: <songname>.wav -> <songname>.wav
