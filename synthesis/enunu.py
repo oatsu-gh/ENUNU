@@ -132,7 +132,7 @@ def main_as_plugin(path_plugin: str) -> str:
     copy(path_plugin, path_temp_ust)
 
     # USTを事前加工------------------------------------------------------------------
-    ust_editor = config.get('ust_editor')
+    ust_editor = config.extensions.get('ust_editor')
     if ust_editor is not None:
         print(f'{datetime.now()} : editing UST(for UTAU-plugins) with {ust_editor}')
         run_extension(
@@ -153,7 +153,7 @@ def main_as_plugin(path_plugin: str) -> str:
     full2mono(path_full_score, path_mono_score)
 
     # フルラベル(score)を加工-------------------------------------------------------
-    editor = config.get('score_editor')
+    editor = config.extensions.get('score_editor')
     if editor is not None:
         print(f'{datetime.now()} : editing score with {editor}')
         # 変更前のモノラベルを読んでおく
@@ -194,7 +194,7 @@ def main_as_plugin(path_plugin: str) -> str:
     full2mono(path_full_timelag, path_mono_timelag)
 
     # フルラベル(timelag)を加工: timelag.full -> timelag.full---------------------
-    editor = config.get('timelag_editor')
+    editor = config.extensions.get('timelag_editor')
     if editor is not None:
         print(f'{datetime.now()} : editing timelag with {editor}')
         # 変更前のモノラベルを読んでおく
@@ -233,7 +233,7 @@ def main_as_plugin(path_plugin: str) -> str:
     full2mono(path_full_duration, path_mono_duration)
 
     # フルラベル(duration)を加工: duration.full -> duration.full-----------------
-    editor = config.get('duration_editor')
+    editor = config.extensions.get('duration_editor')
     if editor is not None:
         print(f'{datetime.now()} : editing duration with {editor}')
         # 変更前のモノラベルを読んでおく
@@ -275,7 +275,7 @@ def main_as_plugin(path_plugin: str) -> str:
     full2mono(path_full_timing, path_mono_timing)
 
     # フルラベル(timing) を加工: timing.full -> timing.full----------------------
-    editor = config.get('timing_editor')
+    editor = config.extensions.get('timing_editor')
     if editor is not None:
         print(f'{datetime.now()} : editing timing with {editor}')
         # 変更前のモノラベルを読んでおく
@@ -311,7 +311,7 @@ def main_as_plugin(path_plugin: str) -> str:
     timing2acoustic(config, path_full_timing, path_acoustic)
 
     # 音響パラメータを加工: acoustic.csv -> acoustic.csv-------------------------
-    editor = config.get('acoustic_editor')
+    editor = config.extensions.get('acoustic_editor')
     if editor is not None:
         print(f'{datetime.now()} : editing acoustic with {editor}')
         run_extension(
@@ -340,7 +340,7 @@ def main_as_plugin(path_plugin: str) -> str:
     )
 
     # 音声ファイルを加工: <songname>.wav -> <songname>.wav
-    editor = config.get('wav_editor')
+    editor = config.extensions.get('wav_editor')
     if editor is not None:
         print(f'{datetime.now()} : editing WAV with {editor}')
         run_extension(
@@ -381,9 +381,9 @@ def main(path: str):
 
 
 if __name__ == '__main__':
-    print('_____ξ ・ヮ・)ξ < ENUNU v0.2.5 ________')
+    print('_____ξ ・ヮ・)ξ < ENUNU v0.3.0 ________')
     print(f'argv: {argv}')
-    if len(argv) == 2:
+    if len(argv) == 3 or len(argv) == 2:
         main(argv[1])
     elif len(argv) == 1:
         main(input('Input file path of TMP(plugin)\n>>> ').strip('"'))
