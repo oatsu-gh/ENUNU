@@ -5,8 +5,10 @@ ENUNUで外部ツールを呼び出すときに必要な関数とか
 """
 
 import subprocess
+from os import getcwd
 from os.path import abspath, basename, dirname, exists, isfile, splitext
 from sys import executable
+from typing import Union
 
 import utaupy
 
@@ -73,6 +75,27 @@ def str_has_been_changed(s_old: str, s_new: str):
     return s_old.strip() != s_new.strip()
 
 
+def parse_extension_path(path) -> Union[str, None]:
+    """拡張機能のパス中のエイリアスを置換する。
+
+    Following aliases are available
+      - '%e' (the directory enunu.py exists in)
+      - '%v' (the directory voicebank and enuconfig.yaml exists in)
+      - '%u' (the directory utau.exe exists in)
+    """
+    if path is None:
+        return None
+    # 各種パスを取得
+    voice_dir = getcwd()
+    enunu_dir = dirname(dirname(__file__))
+    utau_dir = utaupy.utau.utau_root()
+    # 置換
+    path = path.replace(r'%e', enunu_dir)
+    path = path.replace(r'%v', voice_dir)
+    path = path.replace(r'%u', utau_dir)
+    return path
+
+
 def run_extension(path=None, **kwargs):
     """
     USTやラベルを加工する外部ソフトを呼び出す。
@@ -80,6 +103,8 @@ def run_extension(path=None, **kwargs):
     # path = path.strip('"')
     if path is None:
         return None
+    # パスに含まれるエイリアスを展開
+    path = parse_extension_path(path)
     if not exists(path):
         raise ValueError(f'指定されたファイルが見つかりません。({path})')
     if not isfile(path):
@@ -99,9 +124,11 @@ def run_extension(path=None, **kwargs):
 
     # 拡張機能がPythonスクリプトな場合に、
     # ENUNU同梱のインタープリタで実行するようにコマンドを変更する。
-    if splitext(path.strip('"')) == '.py':
+    if splitext(path.strip('"'))[1] == '.py':
         args.insert(0, abspath(executable))
 
     # 拡張機能を呼び出す。
+    print("----------------------------")
     print(args)
     subprocess.run(args, cwd=dirname(path.strip('\'"')), check=True)
+    print("----------------------------")
