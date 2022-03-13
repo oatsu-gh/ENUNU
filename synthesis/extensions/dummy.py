@@ -4,13 +4,14 @@
 ENUNUの拡張機能のダミースクリプト
 """
 from os import getcwd
+from pprint import pprint
 from sys import argv
 
 
 def main():
     print("dummy.py--------------------")
-    print(argv)
-    print(getcwd())
+    pprint(argv)
+    pprint(getcwd())
     print("----------------------------")
 
 
