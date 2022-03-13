@@ -8,9 +8,10 @@ from sys import argv
 
 
 def main():
+    print("dummy.py--------------------")
     print(argv)
     print(getcwd())
-    input('waiting')
+    print("----------------------------")
 
 
 if __name__ == '__main__':
