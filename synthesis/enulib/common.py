@@ -7,9 +7,19 @@ from copy import copy
 from os.path import join
 
 import numpy as np
+import utaupy
 from hydra.utils import to_absolute_path
 from nnmnkwii.io import hts
 from omegaconf import DictConfig
+
+
+def full2mono(path_full, path_mono):
+    """
+    フルラベルをモノラベルに変換して保存する。
+    """
+    full_label = utaupy.hts.load(path_full)
+    mono_label = full_label.as_mono()
+    mono_label.write(path_mono)
 
 
 def ndarray_as_labels(array_2d: np.ndarray, labels: hts.HTSLabelFile) -> hts.HTSLabelFile:
