@@ -6,8 +6,7 @@ ENUNUで外部ツールを呼び出すときに必要な関数とか
 
 import subprocess
 from os import getcwd
-from os.path import abspath, basename, dirname, exists, isfile, splitext
-from pprint import pprint
+from os.path import abspath, dirname, exists, isfile, splitext
 from sys import executable
 from typing import Union
 
@@ -50,7 +49,7 @@ def merge_mono_contexts_change_to_full(path_mono_lab, path_full_lab):
     full_label = utaupy.hts.load(path_full_lab)
     # 音素を上書きする
     for ph_mono, ph_full in zip(mono_label, full_label):
-        ph_full.identity = ph_mono.symbol
+        ph_full.phoneme.identity = ph_mono.symbol
     # フルラベルを上書き保存する
     full_label.write(path_full_lab)
 
@@ -65,7 +64,7 @@ def merge_full_contexts_change_to_mono(path_full_lab, path_mono_lab):
     full_label = utaupy.hts.load(path_full_lab)
     # 音素を上書きする
     for ph_mono, ph_full in zip(mono_label, full_label):
-        ph_mono.symbol, = ph_full.identity
+        ph_mono.symbol = ph_full.phoneme.identity
     # フルラベルを上書き保存する
     mono_label.write(path_full_lab)
 
@@ -121,7 +120,7 @@ def run_extension(path=None, **kwargs):
         if value is None:
             continue
         args.append(f'--{key}')
-        args.append(basename(value))
+        args.append(value)
 
     # 拡張機能がPythonスクリプトな場合に、
     # ENUNU同梱のインタープリタで実行するようにコマンドを変更する。
@@ -129,7 +128,4 @@ def run_extension(path=None, **kwargs):
         args.insert(0, abspath(executable))
 
     # 拡張機能を呼び出す。
-    print("----------------------------")
-    pprint(args)
     subprocess.run(args, cwd=dirname(path.strip('\'"')), check=True)
-    print("----------------------------")
