@@ -14,6 +14,7 @@ from os import chdir, makedirs, startfile
 from os.path import basename, dirname, exists, join, split, splitext
 from sys import argv
 from tempfile import mkdtemp
+from typing import Union
 
 import colored_traceback.always  # pylint: disable=unused-import
 import utaupy
@@ -65,7 +66,8 @@ def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None
 
     # 2ノート以上選択されているかチェックする
     if len(plugin.notes) < 2:
-        raise Exception('ENUNU requires at least 2 notes. / ENUNUを使うときは2ノート以上選択してください。')
+        raise Exception(
+            'ENUNU requires at least 2 notes. / ENUNUを使うときは2ノート以上選択してください。')
 
     # 歌詞が無いか空白のノートを休符にする。
     for note in plugin.notes:
@@ -88,7 +90,8 @@ def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None
 
     # [#PREV] と [#NEXT] を消す前の状態での休符周辺のコンテキストを調整する
     if prev_exists or next_exists:
-        full_label = utaupy.hts.adjust_pau_contexts(full_label, strict=strict_sinsy_style)
+        full_label = utaupy.hts.adjust_pau_contexts(
+            full_label, strict=strict_sinsy_style)
 
     # [#PREV] のノート(の情報がある行)を削る
     if prev_exists:
@@ -116,7 +119,7 @@ def utauplugin2hts(path_plugin_in, path_table, path_full_out, path_mono_out=None
         full_label.as_mono().write(path_mono_out)
 
 
-def main_as_plugin(path_plugin: str, path_output: str) -> str:
+def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
     """
     UtauPluginオブジェクトから音声ファイルを作る
     """
@@ -139,9 +142,9 @@ def main_as_plugin(path_plugin: str, path_output: str) -> str:
     config = DictConfig(OmegaConf.load(path_enuconfig))
 
     # 入出力パスを設定する
-    if path_output is not None:
-        out_dir, songname = split(path_output)
-        songname = splitext(songname)[0]
+    if path_wav_out is not None:
+        songname = splitext(basename(path_wav_out))[0]
+        out_dir = dirname(path_wav_out)
     elif path_ust is not None:
         songname = f"{splitext(basename(path_ust))[0]}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
         out_dir = join(dirname(path_ust), songname)
@@ -189,19 +192,19 @@ def main_as_plugin(path_plugin: str, path_output: str) -> str:
     hts2wav(config, path_full_score_lab, path_wav)
     print(f'{datetime.now()} : generating WAV ({path_wav})')
     # Windowsの時は音声を再生する。
-    if path_output is None:
+    if path_wav_out is None:
         startfile(path_wav)
 
     return path_wav
 
 
-def main(path: str, path_output: str):
+def main(path_plugin: str, path_wav_out: Union[str, None]):
     """
     入力ファイルによって処理を分岐する。
     """
     # logging.basicConfig(level=logging.INFO)
-    if path.endswith('.tmp'):
-        main_as_plugin(path, path_output)
+    if path_plugin.endswith('.tmp'):
+        main_as_plugin(path_plugin, path_wav_out)
     else:
         raise ValueError('Input file must be TMP(plugin).')
 
@@ -210,12 +213,10 @@ if __name__ == '__main__':
     print('_____ξ ・ヮ・)ξ < ENUNU v0.2.5 ________')
     print(f'argv: {argv}')
     if len(argv) == 3:
-        path_utauplugin = argv[1]
-        path_output = argv[2]
+        main(argv[1], argv[2])
     elif len(argv) == 2:
-        path_utauplugin = argv[1]
-        path_output = None
+        main(argv[1], None)
     elif len(argv) == 1:
-        path_utauplugin = \
-            input('Input file path of TMP(plugin)\n>>> ').strip('"')
-    main(path_utauplugin, path_output)
+        main(input('Input file path of TMP(plugin)\n>>> ').strip('"'), None)
+    else:
+        raise Exception('Unexpected number of arguments.')
