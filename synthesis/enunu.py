@@ -99,7 +99,7 @@ def get_project_path(path_utauplugin):
     return path_ust, voice_dir, cache_dir
 
 
-def main_as_plugin(path_plugin: str) -> str:
+def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
     """
     UtauPluginオブジェクトから音声ファイルを作る
     """
@@ -124,11 +124,15 @@ def main_as_plugin(path_plugin: str) -> str:
     # 日付時刻を取得
     str_now = datetime.now().strftime('%Y%m%d_%H%M%S')
     # 入出力パスを設定する
-    if path_ust is not None:
-        songname = splitext(basename(path_ust))[0]
-        out_dir = dirname(path_ust)
+    if path_wav_out is not None:
+        songname = splitext(basename(path_wav_out))[0]
+        out_dir = dirname(path_wav_out)
         temp_dir = join(out_dir, f'{songname}_enutemp')
-    # USTが未保存の場合
+    elif path_ust is not None:
+        songname = f"{splitext(basename(path_ust))[0]}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        out_dir = join(dirname(path_ust), songname)
+        temp_dir = join(out_dir, f'{songname}_enutemp')
+   # WAV出力パス指定なしかつUST未保存の場合
     else:
         print('USTが保存されていないので一時フォルダにWAV出力します。')
         songname = f'temp__{str_now}'
@@ -511,18 +515,19 @@ def main_as_plugin(path_plugin: str) -> str:
     # hts2json(path_full_score, path_json)
 
     # Windowsの時は音声を再生する。
-    startfile(path_wav)
+    if path_wav_out is None:
+        startfile(path_wav)
 
     return path_wav
 
 
-def main(path: str):
+def main(path_plugin: str, path_wav_out: Union[str, None]):
     """
     入力ファイルによって処理を分岐する。
     """
     # logging.basicConfig(level=logging.INFO)
-    if path.endswith('.tmp'):
-        main_as_plugin(path)
+    if path_plugin.endswith('.tmp'):
+        main_as_plugin(path_plugin, path_wav_out)
     else:
         raise ValueError('Input file must be TMP(plugin).')
 
@@ -530,9 +535,11 @@ def main(path: str):
 if __name__ == '__main__':
     print('_____ξ ・ヮ・)ξ < ENUNU v0.3.0 ________')
     print(f'argv: {argv}')
-    if len(argv) == 3 or len(argv) == 2:
-        main(argv[1])
+    if len(argv) == 3:
+        main(argv[1], argv[2])
+    elif len(argv) == 2:
+        main(argv[1], None)
     elif len(argv) == 1:
-        main(input('Input file path of TMP(plugin)\n>>> ').strip('"'))
+        main(input('Input file path of TMP(plugin)\n>>> ').strip('"'), None)
     else:
-        raise Exception('引数が多すぎます。')
+        raise Exception('引数が多すぎます。/ Too many arguments.')
