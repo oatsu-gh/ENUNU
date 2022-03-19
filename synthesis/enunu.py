@@ -53,6 +53,13 @@ warnings.simplefilter('ignore')
 #     from hts2wav import hts2wav  # pylint: disable=ungrouped-imports
 
 
+def get_standard_function_config(config, key) -> Union[None, str]:
+    if 'extensions' not in config:
+        return 'built-in'
+    else:
+        return config.extensions.get(key)
+
+
 def get_extension_path_list(config, key) -> Union[None, List[str]]:
     """拡張機能のパスのリストを取得する。
     パスが複数指定されていてもひとつしか指定されていなくてもループできるようにする。
@@ -161,14 +168,13 @@ def main_as_plugin(path_plugin: str) -> str:
             )
 
     # フルラベル(score)生成----------------------------------------------------------
-    print(f'{datetime.now()} : converting UST to score')
-
-    converter = config.extensions.get('ust_converter')
+    converter = get_standard_function_config(config, 'ust_converter')
     # フルラベル生成をしない場合
     if converter is None:
         pass
     # ENUNUの組み込み機能でUST→LAB変換をする場合
     elif converter == 'built-in':
+        print(f'{datetime.now()} : converting UST to score with built-in function')
         utauplugin2score(
             path_temp_ust,
             config.table_path,
@@ -180,6 +186,8 @@ def main_as_plugin(path_plugin: str) -> str:
         full2mono(path_full_score, path_mono_score)
     # 外部ソフトでUST→LAB変換をする場合
     else:
+        print(
+            f'{datetime.now()} : converting UST to score with built-in function{converter}')
         run_extension(
             converter,
             ust=path_temp_ust,
@@ -189,7 +197,7 @@ def main_as_plugin(path_plugin: str) -> str:
         )
 
     # フルラベル(score)を加工-------------------------------------------------------
-    extension_list = config.extensions.get('score_editor')
+    extension_list = get_extension_path_list(config, 'score_editor')
     if extension_list is not None:
         for path_extension in extension_list:
             print(f'{datetime.now()} : editing score with {path_extension}')
@@ -221,7 +229,7 @@ def main_as_plugin(path_plugin: str) -> str:
                     path_full_timelag, path_mono_timelag)
 
     # フルラベル(timelag)を生成: score.full -> timelag.full-----------------------
-    calculator = config.extensions.get('timelag_calculator', 'built-in')
+    calculator = get_standard_function_config(config, 'timelag_calculator')
     # timelag計算をしない場合
     if calculator is None:
         print(f'{datetime.now()} : skipped timelag calculation')
@@ -279,7 +287,7 @@ def main_as_plugin(path_plugin: str) -> str:
                     path_full_timelag, path_mono_timelag)
 
     # フルラベル(duration) を生成 score.full & timelag.full -> duration.full-----
-    calculator = config.extensions.get('duration_calculator', 'built-in')
+    calculator = get_standard_function_config(config, 'duration_calculator')
     # duration計算をしない場合
     if calculator is None:
         print(f'{datetime.now()} : skipped duration calculation')
@@ -341,7 +349,7 @@ def main_as_plugin(path_plugin: str) -> str:
                     path_full_duration, path_mono_duration)
 
     # フルラベル(timing) を生成 timelag.full & duration.full -> timing.full------
-    calculator = config.extensions.get('timing_calculator', 'built-in')
+    calculator = get_standard_function_config(config, 'timing_calculator')
     # duration計算をしない場合
     if calculator is None:
         print(f'{datetime.now()} : skipped timing calculation')
@@ -407,7 +415,7 @@ def main_as_plugin(path_plugin: str) -> str:
                     path_full_timing, path_mono_timing)
 
     # 音響パラメータを推定 timing.full -> acoustic---------------------------
-    calculator = config.extensions.get('timing_calculator', 'built-in')
+    calculator = get_standard_function_config(config, 'timing_calculator')
     # 計算をしない場合
     if calculator is None:
         print(f'{datetime.now()} : skipped timing calculation')
@@ -452,8 +460,7 @@ def main_as_plugin(path_plugin: str) -> str:
             )
 
     # WORLDを使って音声ファイルを生成: acoustic.csv -> <songname>.wav--------------
-    synthesizer = config.extensions.get('wav_synthesizer', 'built-in')
-
+    synthesizer = get_standard_function_config(config, 'wav_synthesizer')
     # 計算をしない場合
     if synthesizer is None:
         print(f'{datetime.now()} : skipped synthesizing WAV')
