@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+# Copyright (c) 2022 oatsu
+"""
+ENUNUで合成するときに timelag/duration/acoustic共通で使う関数とか。
+"""
+from copy import copy
+from os.path import join
+
+import numpy as np
+import utaupy
+from hydra.utils import to_absolute_path
+from nnmnkwii.io import hts
+from omegaconf import DictConfig
+
+
+def full2mono(path_full, path_mono):
+    """
+    フルラベルをモノラベルに変換して保存する。
+    """
+    full_label = utaupy.hts.load(path_full)
+    mono_label = full_label.as_mono()
+    mono_label.write(path_mono)
+
+
+def ndarray_as_labels(array_2d: np.ndarray, labels: hts.HTSLabelFile) -> hts.HTSLabelFile:
+    """
+    timelag, duration, timing などの ndarray を nnmnkwii.io.hts.HTSLabelFile に変換する。
+    """
+    if array_2d.ndim != 2:
+        raise ValueError("input ndarray must be 2-dimentional array")
+    new_labels = copy(labels)
+    # 1列目を展開して発声開始時刻のところに入れる
+    new_labels.start_times = np.ravel(np.round(array_2d[:, 0]).astype(int))
+    # 発声終了時刻の列がない場合(timelag, duration)は0を代わりに入れる。
+    if array_2d.shape[1] == 1:
+        new_labels.end_times = [0] * len(array_2d)
+    # 発声終了時刻の列がある場合(timing)はそれをコピーする。
+    elif array_2d.shape[1] == 2:
+        new_labels.end_times = np.ravel(np.round(array_2d[:, 1]).astype(int))
+    else:
+        raise ValueError(
+            f"new_labels.shape should be (2, 1) or (2, 2). (new_labels.shape = {new_labels.shape})"
+        )
+    return new_labels
+
+
+def set_checkpoint(config: DictConfig, typ: str):
+    """
+    使うモデルを指定する。
+    """
+    if config.model_dir is None:
+        raise ValueError('"model_dir" config is required')
+    model_dir = to_absolute_path(config.model_dir)
+    # config.timelagに項目を追加
+    config[typ].model_yaml = \
+        join(model_dir, typ, 'model.yaml')
+    config[typ].checkpoint = \
+        join(model_dir, typ, config[typ].checkpoint)
+
+
+def set_normalization_stat(config: DictConfig, typ: str):
+    """
+    何してるのかわからないけどconfigを上書きする。
+    """
+    if config.stats_dir is None:
+        raise ValueError('"stats_dir" config is required')
+    stats_dir = to_absolute_path(config.stats_dir)
+    # config.timelagに項目を追加
+    config[typ].in_scaler_path = \
+        join(stats_dir, f'in_{typ}_scaler.joblib')
+    config[typ].out_scaler_path = \
+        join(stats_dir, f'out_{typ}_scaler.joblib')
+
+
+def load_qustion(question_path, append_hat_for_LL=False) -> tuple:
+    """
+    question.hed ファイルを読み取って、
+    binary_dict, continuous_dict, pitch_idx, pitch_indices を返す。
+    """
+    binary_dict, continuous_dict = \
+        hts.load_question_set(
+            question_path, append_hat_for_LL=append_hat_for_LL)
+    pitch_indices = np.arange(len(binary_dict), len(binary_dict) + 3)
+    pitch_idx = len(binary_dict) + 1
+    return (binary_dict, continuous_dict, pitch_indices, pitch_idx)
