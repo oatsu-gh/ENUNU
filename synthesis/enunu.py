@@ -9,6 +9,7 @@
   - キャッシュフォルダでいいと思う。
 3. LABファイル→WAVファイル
 """
+import sys
 import warnings
 from datetime import datetime
 from os import chdir, makedirs, startfile
@@ -22,35 +23,23 @@ import colored_traceback.always  # pylint: disable=unused-import
 import utaupy
 from omegaconf import DictConfig, OmegaConf
 
-from enulib.acoustic import timing2acoustic
-from enulib.common import full2mono
-from enulib.duration import score2duration
-from enulib.extensions import (merge_full_contexts_change_to_mono,
-                               merge_full_time_change_to_mono,
-                               merge_mono_contexts_change_to_full,
-                               merge_mono_time_change_to_full, run_extension,
-                               str_has_been_changed)
-from enulib.timelag import score2timelag
-from enulib.timing import generate_timing_label
-from enulib.utauplugin2score import utauplugin2score
-from enulib.world import acoustic2wav
-
+# ENUNUのフォルダ直下にあるenulibフォルダをimportできるようにする
+sys.path.append(dirname(__file__))
 warnings.simplefilter('ignore')
-
-# try:
-#     from hts2wav import hts2wav
-# except ModuleNotFoundError:
-#     print('----------------------------------------------------------')
-#     print('初回起動ですね。')
-#     print('PC環境に合わせてPyTorchを自動インストールします。')
-#     print('インストール完了までしばらくお待ちください。')
-#     print('----------------------------------------------------------')
-#     from install_torch import pip_install_torch
-#     pip_install_torch(join('.', 'python-3.8.10-embed-amd64', 'python.exe'))
-#     print('----------------------------------------------------------')
-#     print('インストール成功しました。歌声合成を始めます。')
-#     print('----------------------------------------------------------\n')
-#     from hts2wav import hts2wav  # pylint: disable=ungrouped-imports
+try:
+    import enulib
+except ModuleNotFoundError:
+    print('----------------------------------------------------------')
+    print('初回起動ですね。')
+    print('PC環境に合わせてPyTorchを自動インストールします。')
+    print('インストール完了までしばらくお待ちください。')
+    print('----------------------------------------------------------')
+    from install_torch import pip_install_torch
+    pip_install_torch(join('.', 'python-3.8.10-embed-amd64', 'python.exe'))
+    print('----------------------------------------------------------')
+    print('インストール成功しました。歌声合成を始めます。')
+    print('----------------------------------------------------------\n')
+    import enulib
 
 
 def get_standard_function_config(config, key) -> Union[None, str]:
@@ -176,7 +165,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     if extension_list is not None:
         for path_extension in extension_list:
             print(f'{datetime.now()} : editing UST with {path_extension}')
-            run_extension(
+            enulib.extensions.run_extension(
                 path_extension,
                 ust=path_temp_ust
             )
@@ -189,19 +178,19 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     # ENUNUの組み込み機能でUST→LAB変換をする場合
     elif converter == 'built-in':
         print(f'{datetime.now()} : converting UST to score with built-in function')
-        utauplugin2score(
+        enulib.utauplugin2score.utauplugin2score(
             path_temp_ust,
             path_temp_table,
             path_full_score,
             strict_sinsy_style=False
         )
         # full_score から mono_score を生成
-        full2mono(path_full_score, path_mono_score)
+        enulib.common.full2mono(path_full_score, path_mono_score)
     # 外部ソフトでUST→LAB変換をする場合
     else:
         print(
             f'{datetime.now()} : converting UST to score with built-in function{converter}')
-        run_extension(
+        enulib.extensions.run_extension(
             converter,
             ust=path_temp_ust,
             table=path_temp_table,
@@ -218,7 +207,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             with open(path_mono_timelag, encoding='utf-8') as f:
                 str_mono_old = f.read()
             # 外部ソフトを実行
-            run_extension(
+            enulib.extensions.run_extension(
                 path_extension,
                 ust=path_temp_ust,
                 table=path_temp_table,
@@ -231,15 +220,15 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
         # モノラベルの時刻が変わっていたらフルラベルに転写して、
             # そうでなければフルラベルの時刻をモノラベルに転写する。
             # NOTE: 歌詞が変更されていると思って処理する。
-            if str_has_been_changed(str_mono_old, str_mono_new):
-                merge_mono_time_change_to_full(
+            if enulib.extensions.str_has_been_changed(str_mono_old, str_mono_new):
+                enulib.extensions.merge_mono_time_change_to_full(
                     path_mono_score, path_full_score)
-                merge_mono_contexts_change_to_full(
+                enulib.extensions.merge_mono_contexts_change_to_full(
                     path_mono_score, path_full_score)
             else:
-                merge_full_time_change_to_mono(
+                enulib.extensions.merge_full_time_change_to_mono(
                     path_full_score, path_mono_score)
-                merge_full_contexts_change_to_mono(
+                enulib.extensions.merge_full_time_change_to_mono(
                     path_full_timelag, path_mono_timelag)
 
     # フルラベル(timelag)を生成: score.full -> timelag.full-----------------------
@@ -250,17 +239,17 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     # ENUNUの組み込み機能でtimelag計算をする場合
     elif calculator == 'built-in':
         print(f'{datetime.now()} : calculating timelag with built-in function')
-        score2timelag(
+        enulib.timelag.score2timelag(
             config,
             path_full_score,
             path_full_timelag
         )
         # full_timelag から mono_timelag を生成
-        full2mono(path_full_timelag, path_mono_timelag)
+        enulib.common.full2mono(path_full_timelag, path_mono_timelag)
     # 外部ソフトでtimelag計算をする場合
     else:
         print(f'{datetime.now()} : calculating timelag with {calculator}')
-        run_extension(
+        enulib.extensions.run_extension(
             calculator,
             ust=path_temp_ust,
             table=path_temp_table,
@@ -279,7 +268,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             with open(path_mono_timelag, encoding='utf-8') as f:
                 str_mono_old = f.read()
             # 外部ソフトを起動
-            run_extension(
+            enulib.extensions.run_extension(
                 path_extension,
                 ust=path_temp_ust,
                 table=path_temp_table,
@@ -294,11 +283,11 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             # モノラベルの時刻が変わっていたらフルラベルに転写して、
             # そうでなければフルラベルの時刻をモノラベルに転写する。
             # NOTE: 歌詞は編集していないと信じて処理する。
-            if str_has_been_changed(str_mono_old, str_mono_new):
-                merge_mono_time_change_to_full(
+            if enulib.extensions.str_has_been_changed(str_mono_old, str_mono_new):
+                enulib.extensions.merge_mono_time_change_to_full(
                     path_mono_timelag, path_full_timelag)
             else:
-                merge_full_time_change_to_mono(
+                enulib.extensions.merge_full_time_change_to_mono(
                     path_full_timelag, path_mono_timelag)
 
     # フルラベル(duration) を生成 score.full & timelag.full -> duration.full-----
@@ -309,18 +298,18 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     # ENUNUの組み込み機能でduration計算をする場合
     elif calculator == 'built-in':
         print(f'{datetime.now()} : calculating duration with built-in function')
-        score2duration(
+        enulib.duration.score2duration(
             config,
             path_full_score,
             path_full_timelag,
             path_full_duration
         )
         # full_duration から mono_duration を生成
-        full2mono(path_full_duration, path_mono_duration)
+        enulib.common.full2mono(path_full_duration, path_mono_duration)
     # 外部ソフトで duration 計算をする場合
     else:
         print(f'{datetime.now()} : calculating duration with {calculator}')
-        run_extension(
+        enulib.extensions.run_extension(
             calculator,
             ust=path_temp_ust,
             table=path_temp_table,
@@ -341,7 +330,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             with open(path_mono_duration, encoding='utf-8') as f:
                 str_mono_old = f.read()
             # 外部ソフトでdurationを編集する
-            run_extension(
+            enulib.extensions.run_extension(
                 path_extension,
                 ust=path_temp_ust,
                 table=path_temp_table,
@@ -358,11 +347,11 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             # モノラベルの時刻が変わっていたらフルラベルに転写して、
             # そうでなければフルラベルの時刻をモノラベルに転写する。
             # NOTE: 歌詞は編集していないという前提で処理する。
-            if str_has_been_changed(str_mono_old, str_mono_new):
-                merge_mono_time_change_to_full(
+            if enulib.extensions.str_has_been_changed(str_mono_old, str_mono_new):
+                enulib.extensions.merge_mono_time_change_to_full(
                     path_mono_duration, path_full_duration)
             else:
-                merge_full_time_change_to_mono(
+                enulib.extensions.merge_full_time_change_to_mono(
                     path_full_duration, path_mono_duration)
 
     # フルラベル(timing) を生成 timelag.full & duration.full -> timing.full------
@@ -373,18 +362,18 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     # ENUNUの組み込み機能で計算する場合
     elif calculator == 'built-in':
         print(f'{datetime.now()} : calculating timing with built-in function')
-        generate_timing_label(
+        enulib.timing.generate_timing_label(
             path_full_score,
             path_full_timelag,
             path_full_duration,
             path_full_timing
         )
         # フルラベルからモノラベルを生成
-        full2mono(path_full_timing, path_mono_timing)
+        enulib.common.full2mono(path_full_timing, path_mono_timing)
     # 外部ソフトで計算する場合
     else:
         print(f'{datetime.now()} : calculating timing with {calculator}')
-        run_extension(
+        enulib.extensions.run_extension(
             calculator,
             ust=path_temp_ust,
             table=path_temp_table,
@@ -407,7 +396,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             # 変更前のモノラベルを読んでおく
             with open(path_mono_duration, encoding='utf-8') as f:
                 str_mono_old = f.read()
-            run_extension(
+            enulib.extensions.run_extension(
                 path_extension,
                 ust=path_temp_ust,
                 table=path_temp_table,
@@ -426,11 +415,11 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             # モノラベルの時刻が変わっていたらフルラベルに転写して、
             # そうでなければフルラベルの時刻をモノラベルに転写する。
             # NOTE: 歌詞は編集していないという前提で処理する。
-            if str_has_been_changed(str_mono_old, str_mono_new):
-                merge_mono_time_change_to_full(
+            if enulib.extensions.str_has_been_changed(str_mono_old, str_mono_new):
+                enulib.extensions.merge_mono_time_change_to_full(
                     path_mono_timing, path_full_timing)
             else:
-                merge_full_time_change_to_mono(
+                enulib.extensions.merge_full_time_change_to_mono(
                     path_full_timing, path_mono_timing)
 
     # 音響パラメータを推定 timing.full -> acoustic---------------------------
@@ -441,11 +430,12 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     elif calculator == 'built-in':
         print(
             f'{datetime.now()} : calculating timing with built-in function')
-        timing2acoustic(config, path_full_timing, path_acoustic)
+        enulib.acoustic.timing2acoustic(
+            config, path_full_timing, path_acoustic)
     else:
         print(
             f'{datetime.now()} : calculating timing with {calculator}')
-        run_extension(
+        enulib.extensions.run_extension(
             calculator,
             ust=path_temp_ust,
             table=path_temp_table,
@@ -465,7 +455,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     if extension_list is not None:
         for path_extension in extension_list:
             print(f'{datetime.now()} : editing acoustic with {path_extension}')
-            run_extension(
+            enulib.extensions.run_extension(
                 path_extension,
                 ust=path_temp_ust,
                 table=path_temp_table,
@@ -487,7 +477,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
         print(f'{datetime.now()} : skipped synthesizing WAV')
     elif synthesizer == 'built-in':
         print(f'{datetime.now()} : synthesizing WAV with built-in function')
-        acoustic2wav(
+        enulib.world.acoustic2wav(
             config,
             path_full_timing,
             path_acoustic,
@@ -495,7 +485,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
         )
     else:
         print(f'{datetime.now()} : synthesizing WAV with {synthesizer}')
-        run_extension(
+        enulib.extensions.run_extension(
             synthesizer,
             ust=path_temp_ust,
             table=path_temp_table,
@@ -515,7 +505,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     if extension_list is not None:
         for path_extension in extension_list:
             print(f'{datetime.now()} : editing WAV with {path_extension}')
-            run_extension(
+            enulib.extensions.run_extension(
                 path_extension,
                 ust=path_temp_ust,
                 table=path_temp_table,
