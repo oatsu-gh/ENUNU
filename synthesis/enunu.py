@@ -99,7 +99,7 @@ def get_project_path(path_utauplugin):
     return path_ust, voice_dir, cache_dir
 
 
-def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
+def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     """
     UtauPluginオブジェクトから音声ファイルを作る
     """
@@ -123,26 +123,35 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
 
     # 日付時刻を取得
     str_now = datetime.now().strftime('%Y%m%d_%H%M%S')
-    # 入出力パスを設定する
-    if path_wav_out is not None:
-        songname = splitext(basename(path_wav_out))[0]
-        out_dir = dirname(path_wav_out)
-        temp_dir = join(out_dir, f'{songname}_enutemp')
-    elif path_ust is not None:
-        songname = f"{splitext(basename(path_ust))[0]}__{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        out_dir = join(dirname(path_ust), songname)
-        temp_dir = join(out_dir, f'{songname}_enutemp')
-   # WAV出力パス指定なしかつUST未保存の場合
+
+    # wav出力パスが指定されていない(プラグインとして実行している)場合
+    if path_wav is None:
+        # 入出力パスを設定する
+        if path_ust is not None:
+            songname = splitext(basename(path_ust))[0]
+            out_dir = dirname(path_ust)
+            temp_dir = join(out_dir, f'{songname}_enutemp')
+            path_wav = abspath(join(out_dir, f'{songname}__{str_now}.wav'))
+        # WAV出力パス指定なしかつUST未保存の場合
+        else:
+            print('USTが保存されていないので一時フォルダにWAV出力します。')
+            songname = f'temp__{str_now}'
+            out_dir = mkdtemp(prefix='enunu-')
+            temp_dir = join(out_dir, f'{songname}_enutemp')
+            path_wav = abspath(join(out_dir, f'{songname}__{str_now}.wav'))
+    # WAV出力パスが指定されている場合
     else:
-        print('USTが保存されていないので一時フォルダにWAV出力します。')
-        songname = f'temp__{str_now}'
-        temp_dir = mkdtemp(prefix='enunu-')
-        out_dir = temp_dir
+        songname = splitext(basename(path_wav))[0]
+        out_dir = dirname(path_wav)
+        temp_dir = join(out_dir, f'{songname}_enutemp')
+        path_wav = abspath(path_wav)
 
     # 一時出力フォルダがなければつくる
     makedirs(temp_dir, exist_ok=True)
     # 各種出力ファイルのパスを設定
+    # path_plugin = path_plugin
     path_temp_ust = abspath(join(temp_dir, 'temp.ust'))
+    path_temp_table = abspath(join(temp_dir, 'temp.table'))
     path_full_score = abspath(join(temp_dir, 'score.full'))
     path_mono_score = abspath(join(temp_dir, 'score.lab'))
     path_full_timelag = abspath(join(temp_dir, 'timelag.full'))
@@ -155,11 +164,12 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
     # path_f0 = abspath(join(temp_dir, 'world.f0'))
     # path_bap = abspath(join(temp_dir, 'world.bap'))
     # path_mgc = abspath(join(temp_dir, 'world.mgc'))
-    path_wav = abspath(join(out_dir, f'{songname}__{str_now}.wav'))
 
     # USTを一時フォルダに複製
     print(f'{datetime.now()} : copying UST')
     copy(path_plugin, path_temp_ust)
+    print(f'{datetime.now()} : copying Table')
+    copy(config.table_path, path_temp_table)
 
     # USTを事前加工------------------------------------------------------------------
     extension_list = get_extension_path_list(config, 'ust_editor')
@@ -181,10 +191,9 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
         print(f'{datetime.now()} : converting UST to score with built-in function')
         utauplugin2score(
             path_temp_ust,
-            config.table_path,
+            path_temp_table,
             path_full_score,
-            path_mono_out=None,
-            strict_sinsy_style=(not config.trained_for_enunu)
+            strict_sinsy_style=False
         )
         # full_score から mono_score を生成
         full2mono(path_full_score, path_mono_score)
@@ -195,7 +204,7 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
         run_extension(
             converter,
             ust=path_temp_ust,
-            table=config.table_path,
+            table=path_temp_table,
             full_score=path_full_score,
             mono_score=path_mono_score
         )
@@ -212,6 +221,7 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
             run_extension(
                 path_extension,
                 ust=path_temp_ust,
+                table=path_temp_table,
                 full_score=path_full_score,
                 mono_score=path_mono_score
             )
@@ -253,7 +263,7 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
         run_extension(
             calculator,
             ust=path_temp_ust,
-            table=config.table_path,
+            table=path_temp_table,
             full_score=path_full_score,
             mono_score=path_mono_score,
             full_timelag=path_full_timelag,
@@ -272,6 +282,7 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
             run_extension(
                 path_extension,
                 ust=path_temp_ust,
+                table=path_temp_table,
                 full_score=path_full_score,
                 mono_score=path_mono_score,
                 full_timelag=path_full_timelag,
@@ -312,6 +323,7 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
         run_extension(
             calculator,
             ust=path_temp_ust,
+            table=path_temp_table,
             full_score=path_full_score,
             mono_score=path_mono_score,
             full_timelag=path_full_timelag,
@@ -332,6 +344,7 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
             run_extension(
                 path_extension,
                 ust=path_temp_ust,
+                table=path_temp_table,
                 full_score=path_full_score,
                 mono_score=path_mono_score,
                 full_timelag=path_full_timelag,
@@ -374,6 +387,7 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
         run_extension(
             calculator,
             ust=path_temp_ust,
+            table=path_temp_table,
             full_score=path_full_score,
             mono_score=path_mono_score,
             full_timelag=path_full_timelag,
@@ -396,6 +410,7 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
             run_extension(
                 path_extension,
                 ust=path_temp_ust,
+                table=path_temp_table,
                 full_score=path_full_score,
                 mono_score=path_mono_score,
                 full_timelag=path_full_timelag,
@@ -433,6 +448,7 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
         run_extension(
             calculator,
             ust=path_temp_ust,
+            table=path_temp_table,
             full_score=path_full_score,
             mono_score=path_mono_score,
             full_timelag=path_full_timelag,
@@ -452,6 +468,7 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
             run_extension(
                 path_extension,
                 ust=path_temp_ust,
+                table=path_temp_table,
                 full_score=path_full_score,
                 mono_score=path_mono_score,
                 full_timelag=path_full_timelag,
@@ -481,6 +498,7 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
         run_extension(
             synthesizer,
             ust=path_temp_ust,
+            table=path_temp_table,
             full_score=path_full_score,
             mono_score=path_mono_score,
             full_timelag=path_full_timelag,
@@ -500,6 +518,7 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
             run_extension(
                 path_extension,
                 ust=path_temp_ust,
+                table=path_temp_table,
                 full_score=path_full_score,
                 mono_score=path_mono_score,
                 full_timelag=path_full_timelag,
@@ -514,8 +533,8 @@ def main_as_plugin(path_plugin: str, path_wav_out: str) -> str:
     # print(f'{datetime.now()} : converting LAB to JSON')
     # hts2json(path_full_score, path_json)
 
-    # Windowsの時は音声を再生する。
-    if path_wav_out is None:
+    # 音声を再生する。
+    if exists(path_wav):
         startfile(path_wav)
 
     return path_wav
