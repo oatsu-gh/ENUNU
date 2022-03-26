@@ -140,8 +140,11 @@ def main():
     # enunu.py と hts2wav.py と nnsvs_gen_override.py をコピーする
     print('Copying python scripts')
     shutil.copy2('enunu.py', join(enunu_release_dir))
-    # shutil.copy2('install_torch.py', join(enunu_release_dir, python_dir))
-    shutil.copytree('enulib', join(enunu_release_dir, 'enulib'))
+    shutil.copy2('install_torch.py', join(enunu_release_dir, python_dir))
+    shutil.copytree(
+        'enulib',
+        join(enunu_release_dir, python_dir, 'Lib', 'site-packages', 'enulib')
+    )
 
     # enunu.bat をリリースフォルダに作成
     print('Creating enunu.bat')
