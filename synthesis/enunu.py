@@ -128,12 +128,14 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             out_dir = mkdtemp(prefix='enunu-')
             temp_dir = join(out_dir, f'{songname}_enutemp')
             path_wav = abspath(join(out_dir, f'{songname}__{str_now}.wav'))
+        play_after_synth = True
     # WAV出力パスが指定されている場合
     else:
         songname = splitext(basename(path_wav))[0]
         out_dir = dirname(path_wav)
         temp_dir = join(out_dir, f'{songname}_enutemp')
         path_wav = abspath(path_wav)
+        play_after_synth = False
 
     # 一時出力フォルダがなければつくる
     makedirs(temp_dir, exist_ok=True)
@@ -524,7 +526,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     # hts2json(path_full_score, path_json)
 
     # 音声を再生する。
-    if exists(path_wav):
+    if play_after_synth and exists(path_wav):
         startfile(path_wav)
 
     return path_wav
