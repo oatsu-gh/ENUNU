@@ -83,5 +83,25 @@
 
 ## v0.3.0 (2022-03-26)
 
-- 中間ファイルを外部ソフトで編集できる機能を追加
-- 独立した促音ノートに対応
+- mgc, bap, f0 ファイルの出力機能をいったん削除しました。
+  - 拡張機能として後日復活実装予定です。
+- タイミングや音素を加工するための、拡張機能を呼び出す機能を追加しました。
+- enuconfig.yaml の必須項目から以下の項目を削除しました。
+  - trained_for_enunu
+- enuconfig.yaml に任意項目に以下の項目をを追加しました。
+  - extensions
+    - ust_editor
+    - ust_converter
+    -  score_editor
+    - timelag_calculator
+    - timelag_calculator
+    - duration_calculator
+    - duration_editor
+    - timing_calculator
+    - timing_editor
+    - acoustic_calculator
+    - acoustic_editor
+    - wav_synthesizer
+    - wav_editor
+- USTの子音速度を利用する拡張機能を追加しました。
+  - enuconofig.yaml の `extentions` のうち `timing_editor` に `"%e/extensions/velocity_applier.py"` を指定することで利用できます。
