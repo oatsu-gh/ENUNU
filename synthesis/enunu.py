@@ -394,7 +394,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
         for path_extension in extension_list:
             print(f'{datetime.now()} : editing timing with {path_extension}')
             # 変更前のモノラベルを読んでおく
-            with open(path_mono_duration, encoding='utf-8') as f:
+            with open(path_mono_timing, encoding='utf-8') as f:
                 str_mono_old = f.read()
             enulib.extensions.run_extension(
                 path_extension,
@@ -410,7 +410,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
                 mono_timing=path_mono_timing
             )
             # 変更後のモノラベルを読む
-            with open(path_mono_duration, encoding='utf-8') as f:
+            with open(path_mono_timing, encoding='utf-8') as f:
                 str_mono_new = f.read()
             # モノラベルの時刻が変わっていたらフルラベルに転写して、
             # そうでなければフルラベルの時刻をモノラベルに転写する。
@@ -542,7 +542,7 @@ def main(path_plugin: str, path_wav_out: Union[str, None]):
 
 
 if __name__ == '__main__':
-    print('_____ξ ・ヮ・)ξ < ENUNU v0.3.0 ________')
+    print('_____ξ ・ヮ・)ξ < ENUNU v0.3.1 ________')
     print(f'argv: {argv}')
     if len(argv) == 3:
         main(argv[1], argv[2])
