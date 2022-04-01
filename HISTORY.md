@@ -87,21 +87,27 @@
   - 拡張機能として後日復活実装予定です。
 - タイミングや音素を加工するための、拡張機能を呼び出す機能を追加しました。
 - enuconfig.yaml の必須項目から以下の項目を削除しました。
-  - trained_for_enunu
+  - `trained_for_enunu`
 - enuconfig.yaml に任意項目に以下の項目をを追加しました。
   - extensions
-    - ust_editor
-    - ust_converter
-    -  score_editor
-    - timelag_calculator
-    - timelag_calculator
-    - duration_calculator
-    - duration_editor
-    - timing_calculator
-    - timing_editor
-    - acoustic_calculator
-    - acoustic_editor
-    - wav_synthesizer
-    - wav_editor
+    - `ust_editor`
+    - `ust_converter`
+    -  `score_editor`
+    - `timelag_calculator`
+    - `timelag_calculator`
+    - `duration_calculator`
+    - `duration_editor`
+    - `timing_calculator`
+    - `timing_editor`
+    - `acoustic_calculator`
+    - `acoustic_editor`
+    - `wav_synthesizer`
+    - `wav_editor`
 - USTの子音速度を利用する拡張機能を追加しました。
   - enuconofig.yaml の `extentions` のうち `timing_editor` に `"%e/extensions/velocity_applier.py"` を指定することで利用できます。
+- タイミングラベルの不具合を修復する拡張機能を追加しました。
+  - enuconofig.yaml の `extentions` のうち `timing_editor` に `"%e/extensions/timing_repairer.py"` を指定することで利用できます。
+
+## v0.3.1 (2022-03-29)
+
+- 外部の timing_editor を呼び出してモノラベルだけを編集した場合に、処理結果が適用されない不具合を修正。
