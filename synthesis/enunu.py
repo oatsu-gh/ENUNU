@@ -45,8 +45,7 @@ except ModuleNotFoundError:
 def get_standard_function_config(config, key) -> Union[None, str]:
     if 'extensions' not in config:
         return 'built-in'
-    else:
-        return config.extensions.get(key)
+    return config.extensions.get(key)
 
 
 def get_extension_path_list(config, key) -> Union[None, List[str]]:
@@ -150,9 +149,9 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     path_full_timing = abspath(join(temp_dir, 'timing.full'))
     path_mono_timing = abspath(join(temp_dir, 'timing.lab'))
     path_acoustic = abspath(join(temp_dir, 'acoustic.csv'))
-    # path_f0 = abspath(join(temp_dir, 'world.f0'))
-    # path_bap = abspath(join(temp_dir, 'world.bap'))
-    # path_mgc = abspath(join(temp_dir, 'world.mgc'))
+    path_f0 = abspath(join(temp_dir, 'f0.csv'))
+    path_spectrogram = abspath(join(temp_dir, 'spectrogram.csv'))
+    path_aperiodicity = abspath(join(temp_dir, 'aperiodicity.csv'))
 
     # USTを一時フォルダに複製
     print(f'{datetime.now()} : copying UST')
@@ -301,7 +300,6 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
         enulib.duration.score2duration(
             config,
             path_full_score,
-            path_full_timelag,
             path_full_duration
         )
         # full_duration から mono_duration を生成
@@ -423,18 +421,18 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
                     path_full_timing, path_mono_timing)
 
     # 音響パラメータを推定 timing.full -> acoustic---------------------------
-    calculator = get_standard_function_config(config, 'timing_calculator')
+    calculator = get_standard_function_config(config, 'acoustic_calculator')
     # 計算をしない場合
     if calculator is None:
-        print(f'{datetime.now()} : skipped timing calculation')
+        print(f'{datetime.now()} : skipped acoustic calculation')
     elif calculator == 'built-in':
         print(
-            f'{datetime.now()} : calculating timing with built-in function')
+            f'{datetime.now()} : calculating acoustic with built-in function')
         enulib.acoustic.timing2acoustic(
             config, path_full_timing, path_acoustic)
     else:
         print(
-            f'{datetime.now()} : calculating timing with {calculator}')
+            f'{datetime.now()} : calculating acoustic with {calculator}')
         enulib.extensions.run_extension(
             calculator,
             ust=path_temp_ust,
@@ -469,7 +467,6 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
                 mono_timing=path_mono_timing,
                 acoustic=path_acoustic
             )
-
     # WORLDを使って音声ファイルを生成: acoustic.csv -> <songname>.wav--------------
     synthesizer = get_standard_function_config(config, 'wav_synthesizer')
     # 計算をしない場合
@@ -477,10 +474,40 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
         print(f'{datetime.now()} : skipped synthesizing WAV')
     elif synthesizer == 'built-in':
         print(f'{datetime.now()} : synthesizing WAV with built-in function')
-        enulib.world.acoustic2wav(
+        enulib.world.acoustic2world(
             config,
             path_full_timing,
             path_acoustic,
+            path_f0,
+            path_spectrogram,
+            path_aperiodicity
+        )
+        # TODO: ここなおす
+        extension_list = get_extension_path_list(config, 'f0_editor')
+        if extension_list is not None:
+            for path_extension in extension_list:
+                print(f'{datetime.now()} : editing f0 with {path_extension}')
+                enulib.extensions.run_extension(
+                    path_extension,
+                    ust=path_temp_ust,
+                    table=path_temp_table,
+                    full_score=path_full_score,
+                    mono_score=path_mono_score,
+                    full_timelag=path_full_timelag,
+                    mono_timelag=path_mono_timelag,
+                    full_duration=path_full_duration,
+                    mono_duration=path_mono_duration,
+                    full_timing=path_full_timing,
+                    mono_timing=path_mono_timing,
+                    acoustic=path_acoustic,
+                    f0=path_f0
+                )
+        # WAVファイル出力
+        enulib.world.world2wav(
+            config,
+            path_f0,
+            path_spectrogram,
+            path_aperiodicity,
             path_wav
         )
     else:
@@ -499,7 +526,6 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             mono_timing=path_mono_timing,
             acoustic=path_acoustic
         )
-
     # 音声ファイルを加工: <songname>.wav -> <songname>.wav
     extension_list = get_extension_path_list(config, 'wav_editor')
     if extension_list is not None:

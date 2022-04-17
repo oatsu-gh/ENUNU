@@ -45,7 +45,7 @@ from enulib.common import (ndarray_as_labels, set_checkpoint,
 logger = None
 
 
-def score2duration(config: DictConfig, score_path, timelag_path, duration_path):
+def score2duration(config: DictConfig, score_path, duration_path):
     """
     full_score と timelag ラベルから durationラベルを生成する。
     """
@@ -113,11 +113,11 @@ def score2duration(config: DictConfig, score_path, timelag_path, duration_path):
         model_config,
         in_scaler,
         out_scaler,
-        None,
         binary_dict,
         continuous_dict,
         pitch_indices,
-        log_f0_conditioning
+        log_f0_conditioning,
+        force_clip_input_features=False
     )
     # -----------------------------------------------------
     # ここまで nnsvs.bin.synthesis.synthesis() の内容 -----
@@ -127,7 +127,7 @@ def score2duration(config: DictConfig, score_path, timelag_path, duration_path):
     # 100nsではなくサンプル数(5msごとに1サンプル)なので、
     # フォーマットを統一するために100ns表記に変換する。
     # NOTE: 5msじゃない学習をするようになったら直さないといけない。
-    duration_100ns = duration * 50000
+    duration_100ns = duration[0] * 50000
     # フルラベルとして出力する
     duration_labels = ndarray_as_labels(duration_100ns, labels)
     with open(duration_path, 'w', encoding='utf-8') as f:
