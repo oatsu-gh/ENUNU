@@ -116,6 +116,7 @@
 
 - nnsvs を master ブランチの最新版に更新しました。
   - SHA : `4da3adccd42a581b8c69e01d0e15d9e0b4704373`
+- f0 ファイルなどを加工できるようにしました。
 - enuconfig.yaml の任意項目から以下の項目を削除しました。
   - extensions
     - `timelag_calculator`
