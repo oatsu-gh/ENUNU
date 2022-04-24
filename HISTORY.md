@@ -88,7 +88,7 @@
 - タイミングや音素を加工するための、拡張機能を呼び出す機能を追加しました。
 - enuconfig.yaml の必須項目から以下の項目を削除しました。
   - `trained_for_enunu`
-- enuconfig.yaml に任意項目に以下の項目をを追加しました。
+- enuconfig.yaml の任意項目に以下の項目を追加しました。
   - extensions
     - `ust_editor`
     - `ust_converter`
@@ -111,3 +111,16 @@
 ## v0.3.1 (2022-03-29)
 
 - 外部の timing_editor を呼び出してモノラベルだけを編集した場合に、処理結果が適用されない不具合を修正。
+
+## v0.4.0 (2022-04-24)
+
+- nnsvs を master ブランチの最新版に更新しました。
+  - SHA : `4da3adccd42a581b8c69e01d0e15d9e0b4704373`
+- enuconfig.yaml の任意項目から以下の項目を削除しました。
+  - extensions
+    - `timelag_calculator`
+    - `timelag_calculator`
+    - `duration_calculator`
+    - `duration_editor`
+- 急激なf0変化を滑らかにする拡張機能を追加しました。
+  - enuconofig.yaml の `extentions` のうち `acoustic_editor` に `"%e/extensions/f0_smoother.py"` を指定することで利用できます。
