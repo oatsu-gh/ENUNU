@@ -102,7 +102,7 @@ def main():
     """
     全体的にいい感じにする
     """
-    version = input('ENUNUのバージョンを入力してください。\n>>> ')
+    version = input('ENUNUのバージョンを入力してください。\n>>> ').lstrip('v')
     assert '.' in version
 
     # 既存フォルダを削除する
