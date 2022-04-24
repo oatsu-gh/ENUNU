@@ -9,8 +9,62 @@ from math import cos, log10, pi
 from pprint import pprint
 
 SMOOTHEN_WIDTH = 6  # 3から9くらいが良さそう。
-DETECT_THRESHOLD = 0.5
+DETECT_THRESHOLD = 0.6
 IGNORE_THRESHOLD = 0.01
+
+
+def repair_sudden_zero_f0(f0_list):
+    """
+    前後がどちらもf0=0ではないのに、急に出現したf0=0な点を修正する。
+    >>> repair_sudden_zero_f0([1, 2, 3, 0, 5, 6])
+    [1, 2, 3, 4, 5, 6]
+    """
+    newf0_list = copy(f0_list)
+    for i, f0 in enumerate(f0_list[1:-2], 1):
+        if all((f0 == 0, f0_list[i-1] != 0, f0_list[i+1] != 0)):
+            newf0_list[i] = (f0_list[i-1] + f0_list[i+1]) / 2
+    return newf0_list
+
+
+def repair_jaggy_f0(f0_list, ignore_threshold):
+    """明らかにギザギザしているf0を修復する。
+
+    周囲の動きと明らかに逆の推移をしている区間を修復する。
+    relative_f0 関連でノート境界で起こっている可能性がある。
+    """
+    newf0_list = copy(f0_list)
+    indices = []
+
+    # 不良検出
+    for i, _ in enumerate(f0_list[2:-2], 2):
+        # 計算する区間の両端のf0が無効なときはスキップ
+        if any((f0_list[i-1] == 0, f0_list[i] == 0, f0_list[i+1] == 0, f0_list[i+2] == 0)):
+            continue
+        # 1区間の音程変化
+        delta_1 = f0_list[i+1] - f0_list[i]
+        # 3区間の音程変化
+        delta_3 = f0_list[i+2] - f0_list[i-1]
+        # ゼロ除算しそうなときはスキップ
+        if delta_3 == 0:
+            continue
+        # f0変化が小さいときに誤判定しないようにスキップ
+        if abs(delta_1) < ignore_threshold:
+            continue
+        # 2点間の変化が、その前後の点の変化と逆を向いている場合を検出する。
+        if delta_1 * delta_3 < 0:
+            indices.append(i)
+    print("f0遷移方向が逆になっている区間: ", indices)
+
+    # 修正すべき区間の周辺の点を直線を引いて(半ば強引に)修復
+    for idx in indices:
+        newf0_list[idx - 1] = \
+            0.75 * newf0_list[idx - 2] + 0.25 * newf0_list[idx + 2]
+        newf0_list[idx] = \
+            0.5 * newf0_list[idx - 2] + 0.5 * newf0_list[idx + 2]
+        newf0_list[idx + 1] = \
+            0.25 * newf0_list[idx - 2] + 0.75 * f0_list[idx + 2]
+
+    return newf0_list
 
 
 def get_rapid_f0_change_indices(f0_list: list, detect_threshold: list, ignore_threshold):
@@ -21,7 +75,7 @@ def get_rapid_f0_change_indices(f0_list: list, detect_threshold: list, ignore_th
     indices = []
     # f0のリスト内ループ
     for i, _ in enumerate(f0_list[1:-2], 1):
-        # 計算する区間の中に休符があるときはスキップ
+        # 計算する区間の両端のf0が無効なときはスキップ
         if any((f0_list[i-1] == 0, f0_list[i] == 0, f0_list[i+1] == 0, f0_list[i+2] == 0)):
             continue
         # 1区間の音程変化
@@ -37,6 +91,82 @@ def get_rapid_f0_change_indices(f0_list: list, detect_threshold: list, ignore_th
         # 一定以上の急峻さで検出
         if delta_1 / delta_3 > detect_threshold:
             indices.append(i)
+    return indices
+
+    # def get_rapid_f0_change_indices(f0_list: list, detect_threshold: list, ignore_threshold, width=SMOOTHEN_WIDTH):
+    #     """急峻なf0変化を検出する。
+
+    #     1区間での変化量が前後を含めた3区間の変化量の半分を上回る場合、急峻な変化とみなす。
+    #     3区間ではなく任意の区間で設定できるようにした。
+    #     """
+    #     indices = []
+    #     # f0のリスト内ループ
+    #     for i, _ in enumerate(f0_list[width:-(width+1)], width):
+    #         # 計算する区間の中に休符があるときはスキップ
+    #         if any((f0_list[i-1] == 0, f0_list[i] == 0, f0_list[i+width] == 0, f0_list[i+width] == 0)):
+    #             continue
+    #         # 1区間の音程変化
+    #         delta_1 = f0_list[i+1] - f0_list[i]
+    #         # 3区間の音程変化
+    #         delta_wide = f0_list[i+width+1] - f0_list[i-width]
+    #         # ゼロ除算しそうなときはスキップ
+    #         if delta_wide == 0:
+    #             continue
+    #         # f0変化が小さいときに誤判定しないようにスキップ
+    #         if abs(delta_1) < ignore_threshold:
+    #             continue
+    #         # 一定以上の急峻さで検出
+    #         if delta_1 / delta_wide > detect_threshold:
+    #             indices.append(i)
+    #     return indices
+
+
+def reduce_indices(indices):
+    """時間的に近い2点で急速なf0変化が検出された場合、両方補正すると変になるので削減する。
+
+    # 連続して検出された場合
+    >>> reduce_indices([10, 11])
+    [10]
+
+    # 1つだけ間をあけて検出された場合
+    >>> reduce_indices([10, 12])
+    [11]
+    >>> reduce_indices([10, 12, 16])
+    [11, 16]
+
+    >>> reduce_indices([10, 13])
+    [11]
+
+    # 2回連続で処理する場合(1)
+    >>> reduce_indices([10, 11, 12])
+    [11]
+    >>> reduce_indices([10, 12, 14])
+    [12]
+    >>> reduce_indices([10, 13, 14])
+    [12]
+    >>> reduce_indices([10, 11, 13])
+    [11]
+    >>> reduce_indices([10, 12, 13])
+    [12]
+
+    """
+    indices = copy(indices)
+
+    for i, _ in enumerate(indices[:-1]):
+        delta = indices[i+1] - indices[i]
+        if delta == 1:
+            indices[i] = None
+            indices[i + 1] = indices[i + 1] - 1
+        elif delta == 2:
+            indices[i] = None
+            indices[i + 1] = indices[i + 1] - 1
+        elif delta == 3:
+            indices[i] = None
+            indices[i + 1] = indices[i + 1] - 2
+        else:
+            pass
+    indices = [idx for idx in indices if idx is not None]
+
     return indices
 
 
@@ -63,7 +193,8 @@ def get_adjusted_widths(f0_list: list, rapid_f0_change_indices: list, default_wi
             width -= 1
         # 両端のf0が0な場合は、平滑化の幅を狭める。
         # ただし、wが負になって右側と左側のf0の位置が逆転する前にループを止める。
-        while width > 0 and (f0_list[f0_idx - width] == 0 or f0_list[f0_idx + width + 1] == 0):
+        # while width > 0 and (f0_list[f0_idx - width] == 0 or f0_list[f0_idx + width + 1] == 0):
+        while width > 0 and (0 in f0_list[f0_idx - width: f0_idx + width + 2]):
             width -= 1
         # 調整後の値をリストに追加
         adjusted_widths.append(width)
@@ -112,6 +243,7 @@ def get_smoothened_f0_list(f0_list, width, detect_threshold, ignore_threshold):
         detect_threshold,
         ignore_threshold
     )
+    # rapid_f0_change_indices = reduce_indices(rapid_f0_change_indices)
 
     # 不具合が起きないように補正幅を調整
     adjusted_widths = get_adjusted_widths(
@@ -168,9 +300,16 @@ def main():
 
     # 使わない引数は無視して、必要な情報だけ取り出す。
     args, _ = parser.parse_known_args()
+
     # f0ファイルの入出力パス
-    path_in = str(args.f0).strip('\'"')
-    path_out = path_in
+    # ENUNUからの呼び出しがうまくいっていないか、テスト実行の場合
+    if args.f0 is None:
+        path_in = input('path: ').strip('\'\"')
+        path_out = path_in.replace('.csv', '_out.csv')
+    # ENUNUから呼び出しているとき
+    else:
+        path_in = str(args.f0).strip('\'"')
+        path_out = path_in
 
     # f0のファイルを読み取る
     with open(path_in, 'r', encoding='utf-8') as f:
@@ -180,47 +319,16 @@ def main():
     # f0が負や0だと対数変換できないのを回避しつつ、log(f0)>0 となるようにする。
     log_f0_list = [log10(max(f0, 1)) for f0 in f0_list]
 
-    # なめらかにする
-    new_log_f0_list = get_smoothened_f0_list(
-        log_f0_list,
-        width=SMOOTHEN_WIDTH,
-        detect_threshold=DETECT_THRESHOLD,
-        ignore_threshold=IGNORE_THRESHOLD
-    )
+    # 突発的な0Hzを直す。
+    print('Repairing unnaturally sudden 0Hz in f0')
+    log_f0_list = repair_sudden_zero_f0(log_f0_list)
 
-    # log(f0) でエラーが出ないためにf0=1Hzにしてあるのを0Hzに戻す。
-    new_f0_list = []
-    for log_f0 in new_log_f0_list:
-        # log10(f0)=0 のときに f0=1Hz ではなく 0Hz にする。
-        if log_f0 == 0:
-            f0 = 0
-        else:
-            f0 = 10 ** log_f0
-        new_f0_list.append(f0)
-
-    # 文字列にする
-    s = '\n'.join(list(map(str, new_f0_list)))
-
-    # 出力
-    with open(path_out, 'w', encoding='utf-8') as f:
-        f.write(s)
-
-
-def test():
-    """
-    手動でファイル指定してデバッグする用。
-    """
-    path_in = input('path: ').strip('\'\"')
-    path_out = path_in.replace('.csv', '_out.csv')
-    # f0のファイルを読み取る
-    with open(path_in, 'r', encoding='utf-8') as f:
-        f0_list = list(map(float, f.read().splitlines()))
-
-    # 底を10とした対数に変換する (長さ: N)
-    # f0が負や0だと対数変換できないのを回避しつつ、log(f0)>0 となるようにする。
-    log_f0_list = [log10(max(f0, 1)) for f0 in f0_list]
+    # ギザギザしてるのを直す
+    # log_f0_list = repair_jaggy_f0(
+    #     log_f0_list, ignore_threshold=IGNORE_THRESHOLD)
 
     # なめらかにする
+    print('Smoothening f0')
     new_log_f0_list = get_smoothened_f0_list(
         log_f0_list,
         width=SMOOTHEN_WIDTH,
@@ -247,7 +355,6 @@ def test():
 
 
 if __name__ == "__main__":
-    print('f0_smoother.py------------------------------------')
+    print('f0_smoother.py (2022-04-24) ---------------------------')
     main()
-    # test()
     print('-------------------------------------------------------')
