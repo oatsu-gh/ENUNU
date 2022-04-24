@@ -1,2 +1,2 @@
-from enulib import (acoustic, common, duration, extensions, timelag, timing,
-                    utauplugin2score, world)
+from enulib import (acoustic, common, extensions, timing, utauplugin2score,
+                    world)
