@@ -120,7 +120,7 @@
 - enuconfig.yaml の任意項目から以下の項目を削除しました。
   - extensions
     - `timelag_calculator`
-    - `timelag_calculator`
+    - `timelag_editor`
     - `duration_calculator`
     - `duration_editor`
 - 急激なf0変化を滑らかにする拡張機能を追加しました。
