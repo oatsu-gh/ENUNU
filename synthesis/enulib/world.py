@@ -23,7 +23,7 @@ def estimate_bit_depth(wav: np.ndarray) -> str:
     32bitの最大値: 2147483647
     """
     # 音量の最大値を取得
-    max_gain = np.max(np.abs(wav))
+    max_gain = np.nanmax(np.abs(wav))
     # 学習データのビット深度を推定(8388608=2^24)
     if max_gain > 8388608:
         return 'int32'
