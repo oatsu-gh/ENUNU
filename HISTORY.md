@@ -125,3 +125,8 @@
     - `duration_editor`
 - 急激なf0変化を滑らかにする拡張機能を追加しました。
   - enuconofig.yaml の `extentions` のうち `acoustic_editor` に `"%e/extensions/f0_smoother.py"` を指定することで利用できます。
+
+## v0.4.1 (2022-07-10)
+
+- 合成後に無音が含まれる場合に、WAV全体がノイズのように出力される不具合を修正
+  - 32bit float の形式で出力するときに16bitの値のまま出力する場合があったため、音量が大きすぎてノイズに聞こえる。
