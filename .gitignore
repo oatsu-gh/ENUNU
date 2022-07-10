@@ -3,6 +3,7 @@
 *.wav
 *.pth
 *.cache
+*.csv
 *.zip
 #data
 dump
