@@ -76,9 +76,13 @@ def _score2timelag(config: DictConfig, labels):
     # pitch_idx = len(binary_dict) + 1
     pitch_indices = np.arange(len(binary_dict), len(binary_dict)+3)
 
-    # f0の設定を読み取る。
-    log_f0_conditioning = config.log_f0_conditioning
-
+    # check force_clip_input_features (for backward compatibility)
+    force_clip_input_features = True
+    try:
+        force_clip_input_features = config.timelag.force_clip_input_features
+    except:
+        logger.info(f"force_clip_input_features of {typ} is not set so enabled as default")
+        
     # timelagモデルを適用
     # Time-lag
     lag = predict_timelag(
@@ -91,9 +95,10 @@ def _score2timelag(config: DictConfig, labels):
         binary_dict,
         continuous_dict,
         pitch_indices,
-        log_f0_conditioning,
+        config.log_f0_conditioning,
         config.timelag.allowed_range,
-        config.timelag.allowed_range_rest
+        config.timelag.allowed_range_rest,
+        force_clip_input_features
     )
     # -----------------------------------------------------
     # ここまで nnsvs.bin.synthesis.synthesis() の内容 -----
@@ -155,14 +160,18 @@ def _score2duration(config: DictConfig, labels):
     #     config[typ].question_path = config.question_path
     # --------------------------------------
     # hedファイルを辞書として読み取る。
-    binary_dict, continuous_dict = \
+    binary_dict, numeric_dict = \
         hts.load_question_set(question_path, append_hat_for_LL=False)
     # pitch indices in the input features
     # pitch_idx = len(binary_dict) + 1
     pitch_indices = np.arange(len(binary_dict), len(binary_dict)+3)
 
-    # f0の設定を読み取る。
-    log_f0_conditioning = config.log_f0_conditioning
+    # check force_clip_input_features (for backward compatibility)
+    force_clip_input_features = True
+    try:
+        force_clip_input_features = config.duration.force_clip_input_features
+    except:
+        logger.info(f"force_clip_input_features of {typ} is not set so enabled as default")
 
     # durationモデルを適用
     duration = predict_duration(
@@ -173,10 +182,10 @@ def _score2duration(config: DictConfig, labels):
         in_scaler,
         out_scaler,
         binary_dict,
-        continuous_dict,
+        numeric_dict,
         pitch_indices,
-        log_f0_conditioning,
-        force_clip_input_features=False
+        config.log_f0_conditioning,
+        force_clip_input_features
     )
     # durationのタプルまたはndarrayを返す
     return duration

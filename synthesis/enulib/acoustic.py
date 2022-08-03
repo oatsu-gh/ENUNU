@@ -102,8 +102,13 @@ def timing2acoustic(config: DictConfig, timing_path, acoustic_path):
     # pitch_idx = len(binary_dict) + 1
     pitch_indices = np.arange(len(binary_dict), len(binary_dict)+3)
 
-    # f0の設定を読み取る。
-    log_f0_conditioning = config.log_f0_conditioning
+    # check force_clip_input_features (for backward compatibility)
+    force_clip_input_features = True
+    try:
+        force_clip_input_features = config.acoustic.force_clip_input_features
+    except:
+        logger.info(f"force_clip_input_features of {typ} is not set so enabled as default")
+
     acoustic_features = predict_acoustic(
         device,
         duration_modified_labels,
@@ -115,7 +120,7 @@ def timing2acoustic(config: DictConfig, timing_path, acoustic_path):
         continuous_dict,
         config.acoustic.subphone_features,
         pitch_indices,
-        log_f0_conditioning
+        config.log_f0_conditioning
     )
 
     # csvファイルとしてAcousticの行列を出力
