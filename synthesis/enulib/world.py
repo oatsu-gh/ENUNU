@@ -4,6 +4,7 @@
 acousticのファイルをWAVファイルにするまでの処理を行う。
 """
 import hydra
+import joblib
 import numpy as np
 import pysptk
 import pyworld
@@ -190,27 +191,29 @@ def acoustic2world(config: DictConfig, path_timing, path_acoustic,
         set_checkpoint(config, "postfilter")
         # substitute of maybe_set_normalization_stats_(config)
         set_normalization_stat(config, "postfilter")
-    except:
-        logger.info(f"There is no post_filter_type setting so merlin is used.")
+    except Exception as e:
+        print(e)
+        print(f"There is no post_filter_type setting so merlin is used.")
         
     try:
         post_filter_type = config.acoustic.post_filter_type
-    except: 
-        logger.info(f"There is no post_filter_type setting so merlin is used.")
+    except Exception as e:
+        print(e)
+        print(f"There is no post_filter_type setting so merlin is used.")
         post_filter_type = "merlin"
 
     if post_filter_type not in ["merlin", "nnsvs", "gv", "none"]:
-        logger.info(f"Unknown post-filter type: {post_filter_type} so merlin is used.")
+        print(f"Unknown post-filter type: {post_filter_type} so merlin is used.")
         post_filter_type = "merlin"
-        
-    if config.acoustic.post_filter is not None:
-        logger.info("post_filter is deprecated. Use post_filter_type instead.")
+
+    if "post_filter" in config.acoustic.keys():
+        print("post_filter is deprecated. Use post_filter_type instead.")
     
     try:
         postfilter_out_scaler = joblib.load(config["postfilter"].out_scaler_path)
         # Apply GV post-filtering
         if post_filter_type in ["nnsvs", "gv"]:
-            logger.info("Apply GV post-filtering")        
+            print("Apply GV post-filtering")        
             static_stream_sizes = get_static_stream_sizes(
                 acoustic_model_config.stream_sizes,
                 acoustic_model_config.has_dynamic_features,
@@ -236,20 +239,20 @@ def acoustic2world(config: DictConfig, path_timing, path_acoustic,
                 postfilter_model_config = OmegaConf.load(to_absolute_path(config["postfilter"].model_yaml))
                 postfilter_model = hydra.utils.instantiate(postfilter_model_config.netG).to(device)
 
-                logger.info("Apply mgc_postfilter")        
+                print("Apply mgc_postfilter")        
                 in_feats = (
                     torch.from_numpy(acoustic_features).float().unsqueeze(0)                
                 )
                 in_feats = postfilter_out_scaler.transform(in_feats).float().to(device)
                 out_feats = postfilter_model.inference(in_feats, [in_feats.shape[1]])
                 acoustic_features = (
-                    postfilter_out_scaler.inverse_transform(out_feats.cpu())
+                    postfilter_out_scaler.inverse_transform(out_feats.detach().cpu())
                     .squeeze(0)
                     .numpy()
                 )
     except Exception as e:
-        logger.info(e)
-        logger.info("Unable to use NNSVS/GV postfilter")
+        print(e)
+        print("Unable to use NNSVS/GV postfilter")
 
     # Generate static features from acoustic features
     mgc, lf0, vuv, bap = gen_spsvs_static_features(
@@ -273,9 +276,8 @@ def acoustic2world(config: DictConfig, path_timing, path_acoustic,
         alpha = pysptk.util.mcepalpha(config.sample_rate)
         mgc = merlin_post_filter(mgc, alpha)
     
-        # Remove high-frequency components of mgc/bap
-        # NOTE: It seems to be effective to suppress artifacts of GAN-based post-filtering
-
+    # Remove high-frequency components of mgc/bap
+    # NOTE: It seems to be effective to suppress artifacts of GAN-based post-filtering
     if trajectory_smoothing:
         modfs = int(1 / 0.005)
         for d in range(mgc.shape[1]):

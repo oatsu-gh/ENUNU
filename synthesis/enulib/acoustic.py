@@ -120,8 +120,7 @@ def timing2acoustic(config: DictConfig, timing_path, acoustic_path):
         continuous_dict,
         config.acoustic.subphone_features,
         pitch_indices,
-        config.log_f0_conditioning,
-        force_clip_input_features
+        config.log_f0_conditioning
     )
 
     # csvファイルとしてAcousticの行列を出力
