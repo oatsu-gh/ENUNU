@@ -429,7 +429,7 @@ def main(path_plugin: str, path_wav_out: Union[str, None]):
 
 
 if __name__ == '__main__':
-    print('_____ξ ・ヮ・)ξ < ENUNU v0.5.2 ________')
+    print('_____ξ ・ヮ・)ξ < ENUNU v0.6.0 ________')
     print(f'argv: {argv}')
     if len(argv) == 3:
         main(argv[1], argv[2])
