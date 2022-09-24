@@ -263,7 +263,7 @@ def get_smoothened_f0_list(f0_list, width, detect_threshold, ignore_threshold):
     assert len(rapid_f0_change_indices) == len(target_f0_list)
 
     # 動作内容確認用に出力
-    pprint(list(zip(rapid_f0_change_indices, adjusted_widths, target_f0_list)))
+    # pprint(list(zip(rapid_f0_change_indices, adjusted_widths, target_f0_list)))
 
     # 検出済みの場所と、その周辺に適用するターゲット値の組でループする
     for (f0_idx, width, target_f0) in zip(rapid_f0_change_indices, adjusted_widths, target_f0_list):
@@ -288,6 +288,7 @@ def get_smoothened_f0_list(f0_list, width, detect_threshold, ignore_threshold):
                 ratio_of_original_f0 * f0_list[f0_idx + i + 1]
             )
 
+    print(f'Smoothed {len(rapid_f0_change_indices)} points')
     # [(idx, target_f0), ...] の形にして返す
     return f0_list
 
