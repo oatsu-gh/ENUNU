@@ -26,6 +26,10 @@ def utauplugin2score(path_plugin_in, path_table, path_full_out, strict_sinsy_sty
     for note in plugin.notes:
         if note.lyric.strip(' 　') == '':
             note.lyric = 'R'
+        # フルラベルの区切り文字と干渉しないように符号を置換する
+        if note.flags != '':
+            note.flags = note.flags.replace('-', 'n')
+            note.flags = note.flags.replace('+', 'p')
     # classを変更
     ust = plugin.as_ust()
     # フルラベル用のclassに変換
