@@ -54,11 +54,11 @@ def apply_velocities_to_timing_full_label(path_full_timing, path_ust):
         # 最初の音素が子音だった場合、子音速度に応じて長さを調節する。
         if phoneme.is_consonant():
             duration = phoneme.duration
-            print(
-                f'Applying consonant velocity: {duration} -> ', end='')
+            # print(
+            #     f'Applying consonant velocity: {duration} -> ', end='')
             duration = round(
                 duration * calculate_consonant_magnification(velocity))
-            print(duration)
+            # print(duration)
             # 発声開始時刻を上書き
             phoneme.start = phoneme.end - duration
     # 発声終了時刻を再計算
@@ -71,6 +71,7 @@ def apply_velocities_to_timing_full_label(path_full_timing, path_ust):
 
 if __name__ == "__main__":
     print('velocity_applier.py------------------------------------')
+    print('子音速度をタイミングラベルに反映しました。/ Applying velocity to timing.')
     parser = ArgumentParser()
     parser.add_argument('--ust', help='USTファイルのパス')
     parser.add_argument('--full_timing', help='発声タイミングの情報を持ったHTSフルラベルファイルのパス')
@@ -81,4 +82,5 @@ if __name__ == "__main__":
         path_full_timing=args.full_timing,
         path_ust=args.ust
     )
+    print('子音速度をタイミングラベルに反映しました。/ Applied velocity to timing.')
     print('-------------------------------------------------------')
