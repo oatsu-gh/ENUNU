@@ -1,3 +1,9 @@
+/.vscode
+/venv
+/test
+/server_start.ps1
+/pyproject.toml
+
 *.exe
 *.log
 *.wav
