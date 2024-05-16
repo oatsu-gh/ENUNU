@@ -1,0 +1,15 @@
+# タブまたは半角スペースで区切ってください。
+# シャープから始まる行と何も書いていない行はコメントとして扱います。
+
+通常	Normal
+強	Loud
+弱	Soft
+裏	Falsetto
+囁	Breathy
+甘	Sweet
+岩	Rock
+俺	Me
+Loud	Loud
+Soft	Soft
+Rock	Rock
+Pop	Pop
