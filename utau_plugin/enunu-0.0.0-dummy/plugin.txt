@@ -1,2 +1,0 @@
-name=ENUNU(&9)
-execute=.\wrapper.bat
