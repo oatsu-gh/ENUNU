@@ -154,7 +154,7 @@
 - USTのフラグ欄に `+` または `-` が含まれるときに合成失敗することへの対策機能を追加
 - f0_feedbacker と f0_smoother の標準出力を削減
 - スタイルシフト用の拡張機能 (style_shifter.py) を追加
-  - enuconfig の `ust_editor` と `acoustic_editor` 欄に `%e/extensions/style_shifter` と記載することで使えるようになります。
+  - enuconfig の `ust_editor` と `acoustic_editor` 欄に `%e/extensions/style_shifter.py` と記載することで使えるようになります。
   - USTの各ノートのフラグ欄に `S5` や `S-4` のように記述すると歌い方が変わります。
     - たとえば `S5` とすると半音5つ分だけ高いときの歌い方で歌い、`S-4` とすると半音4つ分だけ低いときの歌い方で歌います。
   - 動作仕様
