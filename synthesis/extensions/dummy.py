@@ -3,16 +3,17 @@
 """
 ENUNUの拡張機能のダミースクリプト
 """
+
 from os import getcwd
 from pprint import pprint
 from sys import argv
 
 
 def main():
-    print("dummy.py--------------------")
+    print('dummy.py--------------------')
     pprint(argv)
     pprint(getcwd())
-    print("----------------------------")
+    print('----------------------------')
 
 
 if __name__ == '__main__':

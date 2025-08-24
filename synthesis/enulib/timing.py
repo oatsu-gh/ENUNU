@@ -6,6 +6,7 @@ timelagとdurationをまとめて実行する。
 MDN系のdurationが確率分布を持って生成されるため、フルラベルにしづらい。
 そのため、timelagとdurationをファイル出力せずにtimingまで一気にやる。
 """
+
 import hydra
 import joblib
 import numpy as np
@@ -45,9 +46,7 @@ def _score2timelag(config: DictConfig, labels):
     # 各種設定を読み込む
     model_config = OmegaConf.load(to_absolute_path(config[typ].model_yaml))
     model = hydra.utils.instantiate(model_config.netG).to(device)
-    checkpoint = torch.load(config[typ].checkpoint,
-                            map_location=lambda storage,
-                            loc: storage)
+    checkpoint = torch.load(config[typ].checkpoint, map_location=lambda storage, loc: storage)
     model.load_state_dict(checkpoint['state_dict'])
     in_scaler = joblib.load(config[typ].in_scaler_path)
     out_scaler = joblib.load(config[typ].out_scaler_path)
@@ -70,19 +69,18 @@ def _score2timelag(config: DictConfig, labels):
     #     config[typ].question_path = config.question_path
     # --------------------------------------
     # hedファイルを辞書として読み取る。
-    binary_dict, continuous_dict = \
-        hts.load_question_set(question_path, append_hat_for_LL=False)
+    binary_dict, continuous_dict = hts.load_question_set(question_path, append_hat_for_LL=False)
     # pitch indices in the input features
     # pitch_idx = len(binary_dict) + 1
-    pitch_indices = np.arange(len(binary_dict), len(binary_dict)+3)
+    pitch_indices = np.arange(len(binary_dict), len(binary_dict) + 3)
 
     # check force_clip_input_features (for backward compatibility)
     force_clip_input_features = True
     try:
         force_clip_input_features = config.timelag.force_clip_input_features
     except:
-        logger.info(f"force_clip_input_features of {typ} is not set so enabled as default")
-        
+        logger.info(f'force_clip_input_features of {typ} is not set so enabled as default')
+
     # timelagモデルを適用
     # Time-lag
     lag = predict_timelag(
@@ -98,7 +96,7 @@ def _score2timelag(config: DictConfig, labels):
         config.log_f0_conditioning,
         config.timelag.allowed_range,
         config.timelag.allowed_range_rest,
-        force_clip_input_features
+        force_clip_input_features,
     )
     # -----------------------------------------------------
     # ここまで nnsvs.bin.synthesis.synthesis() の内容 -----
@@ -133,9 +131,7 @@ def _score2duration(config: DictConfig, labels):
     # 各種設定を読み込む
     model_config = OmegaConf.load(to_absolute_path(config[typ].model_yaml))
     model = hydra.utils.instantiate(model_config.netG).to(device)
-    checkpoint = torch.load(config[typ].checkpoint,
-                            map_location=lambda storage,
-                            loc: storage)
+    checkpoint = torch.load(config[typ].checkpoint, map_location=lambda storage, loc: storage)
     model.load_state_dict(checkpoint['state_dict'])
     in_scaler = joblib.load(config[typ].in_scaler_path)
     out_scaler = joblib.load(config[typ].out_scaler_path)
@@ -160,18 +156,17 @@ def _score2duration(config: DictConfig, labels):
     #     config[typ].question_path = config.question_path
     # --------------------------------------
     # hedファイルを辞書として読み取る。
-    binary_dict, numeric_dict = \
-        hts.load_question_set(question_path, append_hat_for_LL=False)
+    binary_dict, numeric_dict = hts.load_question_set(question_path, append_hat_for_LL=False)
     # pitch indices in the input features
     # pitch_idx = len(binary_dict) + 1
-    pitch_indices = np.arange(len(binary_dict), len(binary_dict)+3)
+    pitch_indices = np.arange(len(binary_dict), len(binary_dict) + 3)
 
     # check force_clip_input_features (for backward compatibility)
     force_clip_input_features = True
     try:
         force_clip_input_features = config.duration.force_clip_input_features
     except:
-        logger.info(f"force_clip_input_features of {typ} is not set so enabled as default")
+        logger.info(f'force_clip_input_features of {typ} is not set so enabled as default')
 
     # durationモデルを適用
     duration = predict_duration(
@@ -185,7 +180,7 @@ def _score2duration(config: DictConfig, labels):
         numeric_dict,
         pitch_indices,
         config.log_f0_conditioning,
-        force_clip_input_features
+        force_clip_input_features,
     )
     # durationのタプルまたはndarrayを返す
     return duration

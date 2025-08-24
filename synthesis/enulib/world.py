@@ -3,6 +3,7 @@
 """
 acousticのファイルをWAVファイルにするまでの処理を行う。
 """
+
 import hydra
 import joblib
 import numpy as np
@@ -13,10 +14,7 @@ from hydra.utils import to_absolute_path
 from nnmnkwii.io import hts
 from nnmnkwii.postfilters import merlin_post_filter
 from nnsvs.dsp import bandpass_filter
-from nnsvs.gen import (
-    gen_spsvs_static_features,
-    gen_world_params
-)
+from nnsvs.gen import gen_spsvs_static_features, gen_world_params
 from nnsvs.logger import getLogger
 from nnsvs.multistream import get_static_stream_sizes
 from nnsvs.pitch import lowpass_filter
@@ -96,7 +94,7 @@ def get_acoustic_feature(
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # 各種設定を読み込む
-    acoustic_model_config = OmegaConf.load(to_absolute_path(config["acoustic"].model_yaml))
+    acoustic_model_config = OmegaConf.load(to_absolute_path(config['acoustic'].model_yaml))
 
     # hedファイルを読み取る。
     question_path = to_absolute_path(config.question_path)
@@ -107,9 +105,7 @@ def get_acoustic_feature(
     # --------------------------------------
 
     # hedファイルを辞書として読み取る。
-    binary_dict, numeric_dict = hts.load_question_set(
-        question_path, append_hat_for_LL=False
-    )
+    binary_dict, numeric_dict = hts.load_question_set(question_path, append_hat_for_LL=False)
 
     # pitch indices in the input features
     pitch_idx = len(binary_dict) + 1
@@ -117,39 +113,37 @@ def get_acoustic_feature(
 
     # pylint: disable=no-member
     # Acousticの数値を読み取る
-    acoustic_features = np.loadtxt(
-        path_acoustic, delimiter=',', dtype=np.float64
-    )
+    acoustic_features = np.loadtxt(path_acoustic, delimiter=',', dtype=np.float64)
 
     # postfilter setting
     try:
         # substitute of maybe_set_checkpoints_(config)
-        set_checkpoint(config, "postfilter")
+        set_checkpoint(config, 'postfilter')
         # substitute of maybe_set_normalization_stats_(config)
-        set_normalization_stat(config, "postfilter")
+        set_normalization_stat(config, 'postfilter')
     except Exception as e:
         print(e)
-        print(f"There is no post_filter_type setting so merlin is used.")
+        print(f'There is no post_filter_type setting so merlin is used.')
 
     try:
         post_filter_type = config.acoustic.post_filter_type
     except Exception as e:
         print(e)
-        print(f"There is no post_filter_type setting so merlin is used.")
-        post_filter_type = "merlin"
+        print(f'There is no post_filter_type setting so merlin is used.')
+        post_filter_type = 'merlin'
 
-    if post_filter_type not in ["merlin", "nnsvs", "gv", "none"]:
-        print(f"Unknown post-filter type: {post_filter_type} so merlin is used.")
-        post_filter_type = "merlin"
+    if post_filter_type not in ['merlin', 'nnsvs', 'gv', 'none']:
+        print(f'Unknown post-filter type: {post_filter_type} so merlin is used.')
+        post_filter_type = 'merlin'
 
-    if "post_filter" in config.acoustic.keys():
-        print("post_filter is deprecated. Use post_filter_type instead.")
+    if 'post_filter' in config.acoustic.keys():
+        print('post_filter is deprecated. Use post_filter_type instead.')
 
     try:
-        postfilter_out_scaler = joblib.load(config["postfilter"].out_scaler_path)
+        postfilter_out_scaler = joblib.load(config['postfilter'].out_scaler_path)
         # Apply GV post-filtering
-        if post_filter_type in ["nnsvs", "gv"]:
-            print("Apply GV post-filtering")
+        if post_filter_type in ['nnsvs', 'gv']:
+            print('Apply GV post-filtering')
             static_stream_sizes = get_static_stream_sizes(
                 acoustic_model_config.stream_sizes,
                 acoustic_model_config.has_dynamic_features,
@@ -171,14 +165,14 @@ def get_acoustic_feature(
             )
 
             # Learned post-filter using nnsvs
-            if post_filter_type == "nnsvs":
-                postfilter_model_config = OmegaConf.load(to_absolute_path(config["postfilter"].model_yaml))
+            if post_filter_type == 'nnsvs':
+                postfilter_model_config = OmegaConf.load(
+                    to_absolute_path(config['postfilter'].model_yaml)
+                )
                 postfilter_model = hydra.utils.instantiate(postfilter_model_config.netG).to(device)
 
-                print("Apply mgc_postfilter")
-                in_feats = (
-                    torch.from_numpy(acoustic_features).float().unsqueeze(0)
-                )
+                print('Apply mgc_postfilter')
+                in_feats = torch.from_numpy(acoustic_features).float().unsqueeze(0)
                 in_feats = postfilter_out_scaler.transform(in_feats).float().to(device)
                 out_feats = postfilter_model.inference(in_feats, [in_feats.shape[1]])
                 acoustic_features = (
@@ -188,7 +182,7 @@ def get_acoustic_feature(
                 )
     except Exception as e:
         print(e)
-        print("Unable to use NNSVS/GV postfilter")
+        print('Unable to use NNSVS/GV postfilter')
 
     # Generate static features from acoustic features
     mgc, lf0, vuv, bap = gen_spsvs_static_features(
@@ -204,11 +198,11 @@ def get_acoustic_feature(
         config.frame_period,
         config.acoustic.relative_f0,
         vibrato_scale,
-        vuv_threshold
+        vuv_threshold,
     )
 
     # NOTE: spectral enhancement based on the Merlin's post-filter implementation
-    if post_filter_type == "merlin":
+    if post_filter_type == 'merlin':
         alpha = pysptk.util.mcepalpha(config.sample_rate)
         mgc = merlin_post_filter(mgc, alpha)
 
@@ -288,6 +282,7 @@ def get_acoustic_feature(
 #     # 音量を調整して 32bit float でファイル出力
 #     generate_wav_file(config, generated_waveform, path_wav)
 
+
 def acoustic2world(
     config: DictConfig,
     path_timing,
@@ -305,28 +300,34 @@ def acoustic2world(
     """
 
     mgc, lf0, vuv, bap = get_acoustic_feature(
-        config, path_timing, path_acoustic, trajectory_smoothing, trajectory_smoothing_cutoff, vibrato_scale, vuv_threshold)
+        config,
+        path_timing,
+        path_acoustic,
+        trajectory_smoothing,
+        trajectory_smoothing_cutoff,
+        vibrato_scale,
+        vuv_threshold,
+    )
 
     # Generate WORLD parameters
     f0, spectrogram, aperiodicity = gen_world_params(
-        mgc, lf0, vuv, bap, config.sample_rate, vuv_threshold=vuv_threshold)
+        mgc, lf0, vuv, bap, config.sample_rate, vuv_threshold=vuv_threshold
+    )
 
     # csvファイルとしてf0の行列を出力
-    for path, array in ((path_f0, f0), (path_spcetrogram, spectrogram), (path_aperiodicity, aperiodicity)):
-        np.savetxt(path, array, fmt="%.16f", delimiter=",")
+    for path, array in (
+        (path_f0, f0),
+        (path_spcetrogram, spectrogram),
+        (path_aperiodicity, aperiodicity),
+    ):
+        np.savetxt(path, array, fmt='%.16f', delimiter=',')
 
 
 def world2wav(config: DictConfig, path_f0, path_spectrogram, path_aperiodicity, path_wav):
     """WORLD用のパラメータからWAVファイルを生成する。"""
-    f0 = np.loadtxt(
-        path_f0, delimiter=',', dtype=np.float64
-    )
-    spectrogram = np.loadtxt(
-        path_spectrogram, delimiter=',', dtype=np.float64
-    )
-    aperiodicity = np.loadtxt(
-        path_aperiodicity, delimiter=',', dtype=np.float64
-    )
+    f0 = np.loadtxt(path_f0, delimiter=',', dtype=np.float64)
+    spectrogram = np.loadtxt(path_spectrogram, delimiter=',', dtype=np.float64)
+    aperiodicity = np.loadtxt(path_aperiodicity, delimiter=',', dtype=np.float64)
     wav = pyworld.synthesize(
         f0, spectrogram, aperiodicity, config.sample_rate, config.frame_period
     )
@@ -356,12 +357,21 @@ def acoustic2vocoder_wav(
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     mgc, lf0, vuv, bap = get_acoustic_feature(
-        config, path_timing, path_acoustic, trajectory_smoothing, trajectory_smoothing_cutoff, vibrato_scale, vuv_threshold)
+        config,
+        path_timing,
+        path_acoustic,
+        trajectory_smoothing,
+        trajectory_smoothing_cutoff,
+        vibrato_scale,
+        vuv_threshold,
+    )
 
     model_config, model, in_scaler = get_vocoder_model(config, device)
 
     vuv = (vuv > vuv_threshold).astype(np.float32)
-    voc_inp = torch.from_numpy(in_scaler.transform(np.concatenate([mgc, lf0, vuv, bap], axis=-1))).float()
+    voc_inp = torch.from_numpy(
+        in_scaler.transform(np.concatenate([mgc, lf0, vuv, bap], axis=-1))
+    ).float()
 
     if use_segment_label:
         segmented_labels = segment_labels(duration_modified_labels)
@@ -382,7 +392,9 @@ def acoustic2vocoder_wav(
             if idx < len(segmented_labels) - 1:
                 end_time += overlap
 
-            wav = model.inference(voc_inp[start_time:end_time].to(device)).view(-1).to("cpu").numpy()
+            wav = (
+                model.inference(voc_inp[start_time:end_time].to(device)).view(-1).to('cpu').numpy()
+            )
 
             if idx > 0:
                 wav = wav[overlap_wav:]
@@ -390,12 +402,12 @@ def acoustic2vocoder_wav(
                 wav = wav[:-overlap_wav]
 
             wavs.append(wav)
-            print(f"infer: {start_time} ~ {end_time}")
+            print(f'infer: {start_time} ~ {end_time}')
 
         # Concatenate segmented wavs
         wav = np.concatenate(wavs, axis=0).reshape(-1)
     else:
-        wav = model.inference(voc_inp.to(device)).view(-1).to("cpu").numpy()
+        wav = model.inference(voc_inp.to(device)).view(-1).to('cpu').numpy()
 
     # post-processing
     wav = bandpass_filter(wav, model_config.sampling_rate)

@@ -32,7 +32,7 @@ PYTORCH_PACKAGES_DICT = {
     # CUDA 10
     'release 10.': ['torch==1.9.1+cu102', 'torchvision==0.10.1+cu102', 'torchaudio==0.9.1'],
     # no CUDA
-    'cpu': ['torch==1.8.1+cpu', 'torchvision==0.9.1', 'torchaudio==0.8.1']
+    'cpu': ['torch==1.8.1+cpu', 'torchvision==0.9.1', 'torchaudio==0.8.1'],
 }
 
 
@@ -40,9 +40,9 @@ def nvcc_v() -> str:
     """
     nvcc -V
     """
-    proc = subprocess.run(['nvcc', '-V'], check=True,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE)
+    proc = subprocess.run(
+        ['nvcc', '-V'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     result = proc.stdout.decode('utf-8')
     return result
 
@@ -68,8 +68,7 @@ def pip_install_torch(python_exe):
     except FileNotFoundError:
         packages = get_pytorch_package_list('cpu')
     # Pytorchをインストールする。
-    command = [python_exe, '-m', 'pip', 'install'] + \
-        packages + ['-f', PYTORCH_STABLE_URL]
+    command = [python_exe, '-m', 'pip', 'install'] + packages + ['-f', PYTORCH_STABLE_URL]
     print('command:', command)
     subprocess.run(command, check=True)
 

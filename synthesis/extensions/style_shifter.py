@@ -7,6 +7,7 @@ USTの音高をずらして読み込んで、合成時にf0を本体の高さに
 UST読み込んで加工する際に、各ノートに独自エントリを書き込む。
 USTにの [#SETTING] にすでに独自エントリがある場合はf0ファイルを編集する。
 """
+
 import re
 from argparse import ArgumentParser
 from copy import copy
@@ -19,8 +20,7 @@ STYLE_SHIFT_FLAG_PATTERN = re.compile(r'S(\d+|\+\d+|-\d+)')
 
 
 def shift_ust_notes(ust) -> utaupy.ust.Ust:
-    """フラグに基づいてUST内のノート番号をずらし、その分を独自エントリに追加する。
-    """
+    """フラグに基づいてUST内のノート番号をずらし、その分を独自エントリに追加する。"""
     ust = copy(ust)
     key = '$EnunuStyleShift'
     ust.setting[key] = True
@@ -44,29 +44,27 @@ def shift_ust_notes(ust) -> utaupy.ust.Ust:
 
 
 def shift_f0(ust, full_timing, f0_list: list) -> list:
-    """f0をいい感じに編集する
-    """
+    """f0をいい感じに編集する"""
     ust_notes = ust.notes
     hts_notes = full_timing.song.all_notes
     # ノート数が一致することを確認しておく
     if len(ust_notes) != len(hts_notes):
         raise ValueError(
-            f'USTのノート数({len(ust_notes)}) と フルラベルのノート数({len(hts_notes)}) が一致していません。')
+            f'USTのノート数({len(ust_notes)}) と フルラベルのノート数({len(hts_notes)}) が一致していません。'
+        )
 
     # 各ノートのf0開始スライスと終了スライス
-    f0_point_slices = [
-        (round(note.start / 50000), round(note.end / 50000)) for note in hts_notes]
+    f0_point_slices = [(round(note.start / 50000), round(note.end / 50000)) for note in hts_notes]
 
     # スタイルシフトの量をUSTのノートから取り出してリストにする
-    style_shift_list = [
-        int(note.get('$EnunuStyleShift', 0)) for note in ust_notes]
+    style_shift_list = [int(note.get('$EnunuStyleShift', 0)) for note in ust_notes]
 
     # 計算しやすいように対数に変換
     log2_f0_list = [log2(hz) if hz > 0 else 0 for hz in f0_list]
 
     # f0のリストをノートごとに区切って2次元にする
     log2_f0_list_2d = [
-        log2_f0_list[slice_start: slice_end] for (slice_start, slice_end) in f0_point_slices
+        log2_f0_list[slice_start:slice_end] for (slice_start, slice_end) in f0_point_slices
     ]
 
     # ノート区切りごとにf0を調製して、新しいf0のリストを作る
@@ -75,17 +73,14 @@ def shift_f0(ust, full_timing, f0_list: list) -> list:
     new_log2_f0_list = log2_f0_list[0:offset]
     for f0_list_for_note, shift_amount in zip(log2_f0_list_2d, style_shift_list):
         delta_log2_f0 = shift_amount / (-12)
-        new_log2_f0_list += [f0 + delta_log2_f0 if f0 >
-                             0 else 0 for f0 in f0_list_for_note]
+        new_log2_f0_list += [f0 + delta_log2_f0 if f0 > 0 else 0 for f0 in f0_list_for_note]
     # 書き換えたやつ対数から元に戻す
-    new_f0_list = [
-        (2 ** log2_f0 if log2_f0 > 0 else 0) for log2_f0 in new_log2_f0_list]
+    new_f0_list = [(2**log2_f0 if log2_f0 > 0 else 0) for log2_f0 in new_log2_f0_list]
     return new_f0_list
 
 
 def switch_mode(ust) -> str:
-    """どのタイミングで起動されたかを、USTから調べて動作モードを切り替える。
-    """
+    """どのタイミングで起動されたかを、USTから調べて動作モードを切り替える。"""
     if '$EnunuStyleShift' in ust.setting:
         return 'f0_editor'
     return 'ust_editor'
@@ -135,7 +130,7 @@ def main():
         raise Exception('動作モードを判別できませんでした。')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     print('style_shifter.py (2022-09-24) -------------------------')
     main()
     print('-------------------------------------------------------')

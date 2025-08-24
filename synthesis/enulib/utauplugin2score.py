@@ -4,6 +4,7 @@
 TMPファイル(UTAUプラグインに渡されるUST似のファイル) を
 フルラベル(full_score)とモノラベル(mono_score)に変換する。
 """
+
 import utaupy
 
 

@@ -15,17 +15,15 @@ F0_FLOOR = 32
 
 
 def load_f0(path_f0, frame_period=FRAME_PERIOD):
-    """f0のファイルを読み取って、周波数と時刻(ms)の一覧を返す。
-    """
+    """f0のファイルを読み取って、周波数と時刻(ms)の一覧を返す。"""
     with open(path_f0, 'r', encoding='utf-8') as f:
         freq_list = list(map(float, f.read().splitlines()))
-    time_list = [i*frame_period for i in range(len(freq_list))]
+    time_list = [i * frame_period for i in range(len(freq_list))]
     return freq_list, time_list
 
 
 def distribute_f0(freq_list, time_list, ust):
-    """周波数とその時刻の情報をノートごとに分割する。
-    """
+    """周波数とその時刻の情報をノートごとに分割する。"""
     # 要素数が一致していることを確認しておく。
     assert len(freq_list) == len(time_list)
     len_f0 = len(freq_list)
@@ -76,15 +74,14 @@ def reduce_f0_points_for_a_note(f0_list, time_list):
     # 1階微分
     delta_f0_freq = [0]  # 最初の点は勾配を計算できないので0
     delta_f0_freq += [
-        next_freq - prev_freq for next_freq, prev_freq
-        in zip(f0_list[:-1], f0_list[1:])
+        next_freq - prev_freq for next_freq, prev_freq in zip(f0_list[:-1], f0_list[1:])
     ]
     delta_f0_freq += [0]  # 最後の点も勾配を計算できないので0
 
     # 極値のindexを取り出す
-    extremum_f0_indices = \
-        list(argrelmax(np.array(f0_list))[0]) + \
-        list(argrelmin(np.array(f0_list))[0])
+    extremum_f0_indices = list(argrelmax(np.array(f0_list))[0]) + list(
+        argrelmin(np.array(f0_list))[0]
+    )
     # 最初と最後と極値のindex (残すf0点のみ)
     reduced_f0_indices = [0] + extremum_f0_indices + [len(f0_list) - 1]
 
@@ -112,14 +109,12 @@ def reduce_f0_points_for_a_note(f0_list, time_list):
 
 
 def notenum2hz(notenum: int, concert_pitch=440) -> float:
-    """UTAUの音階番号を周波数に変換する
-    """
+    """UTAUの音階番号を周波数に変換する"""
     return concert_pitch * (2 ** ((notenum - 69) / 12))
 
 
 def hz2cent(freq: float, notenum: int):
-    """f0の周波数をUST用のPBY用の数値に変換する
-    """
+    """f0の周波数をUST用のPBY用の数値に変換する"""
     base_hz = notenum2hz(notenum)
     if freq == 0:
         cent = 0
@@ -133,7 +128,7 @@ def note_times_ms(ust):
     [[start, end], ...]
     """
     t_start = 0  # ノート開始時刻
-    t_end = 0   # ノート終了時刻
+    t_end = 0  # ノート終了時刻
     l_start_end = []  # 開始時刻と終了時刻のリスト
 
     # 各ノートの長さから、開始時刻と終了時刻を計算する
@@ -146,8 +141,7 @@ def note_times_ms(ust):
 
 
 def test():
-    """Test
-    """
+    """Test"""
     # USTファイルを読み取る
     path_ust = input('USTファイルを指定してください: ').strip('"')
     ust = utaupy.ust.load(path_ust)
@@ -167,15 +161,12 @@ def test():
     # 各ノートのf0点を削減する
     print('ピッチ点を削減します。')
     for freq_list_for_a_note, time_list_for_a_note in zip(freq_list_2d, time_list_2d):
-        l_freq, l_time = reduce_f0_points_for_a_note(
-            freq_list_for_a_note, time_list_for_a_note
-        )
+        l_freq, l_time = reduce_f0_points_for_a_note(freq_list_for_a_note, time_list_for_a_note)
         reduced_freq_list_2d.append(l_freq)
         reduced_time_list_2d.append(l_time)
 
     # 各ノートのピッチ点を登録する
-    assert len(ust.notes) == len(
-        reduced_freq_list_2d) == len(reduced_time_list_2d)
+    assert len(ust.notes) == len(reduced_freq_list_2d) == len(reduced_time_list_2d)
     print('各ノートにPBYとPBWとPBMを登録します。')
     for note, l_freq, l_time in zip(ust.notes, reduced_freq_list_2d, reduced_time_list_2d):
         notenum = note.notenum
@@ -184,8 +175,7 @@ def test():
         # 相対音高(cent)を計算してPBYを登録
         note.pby = [hz2cent(freq, notenum) for freq in l_freq] + [0]
         # 時刻を計算してPBWを登録
-        note.pbw = [0] + [t_next - t_now for t_now, t_next
-                          in zip(l_time[:-1], l_time[1:])] + [0]
+        note.pbw = [0] + [t_next - t_now for t_now, t_next in zip(l_time[:-1], l_time[1:])] + [0]
         # 全てS字で登録
         note.pbm = [''] * (len(l_freq) + 1)
 
@@ -204,5 +194,5 @@ def test():
     ust.write(path_ust_out)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     test()

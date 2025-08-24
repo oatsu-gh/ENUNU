@@ -13,20 +13,17 @@ import utaupy
 
 
 def get_velocities(ust):
-    """USTを読み取って子音速度のリストを返す。
-    """
+    """USTを読み取って子音速度のリストを返す。"""
     return tuple(note.velocity for note in ust.notes)
 
 
 def calculate_consonant_magnification(velocity):
-    """子音速度を倍率に変換する。
-    """
+    """子音速度を倍率に変換する。"""
     return 2 ** ((100 - velocity) / 100)
 
 
 def repair_label(path_label, time_unit=50000):
-    """発声開始時刻が直前のノートの発声開始時刻より早くなっている音素を直す。
-    """
+    """発声開始時刻が直前のノートの発声開始時刻より早くなっている音素を直す。"""
     label = utaupy.label.load(path_label)
     previous_start = label[0].start
     for phoneme in label:
@@ -37,8 +34,7 @@ def repair_label(path_label, time_unit=50000):
 
 
 def apply_velocities_to_timing_full_label(path_full_timing, path_ust):
-    """フルラベルファイルにUSTファイルの子音速度を適用する。
-    """
+    """フルラベルファイルにUSTファイルの子音速度を適用する。"""
     ust = utaupy.ust.load(path_ust)
     song = utaupy.hts.load(path_full_timing).song
     # ノート数が一致しないと処理できないのでエラー
@@ -56,8 +52,7 @@ def apply_velocities_to_timing_full_label(path_full_timing, path_ust):
             duration = phoneme.duration
             # print(
             #     f'Applying consonant velocity: {duration} -> ', end='')
-            duration = round(
-                duration * calculate_consonant_magnification(velocity))
+            duration = round(duration * calculate_consonant_magnification(velocity))
             # print(duration)
             # 発声開始時刻を上書き
             phoneme.start = phoneme.end - duration
@@ -69,18 +64,17 @@ def apply_velocities_to_timing_full_label(path_full_timing, path_ust):
     repair_label(path_full_timing)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     print('velocity_applier.py------------------------------------')
     print('子音速度をタイミングラベルに反映しました。/ Applying velocity to timing.')
     parser = ArgumentParser()
     parser.add_argument('--ust', help='USTファイルのパス')
-    parser.add_argument('--full_timing', help='発声タイミングの情報を持ったHTSフルラベルファイルのパス')
+    parser.add_argument(
+        '--full_timing', help='発声タイミングの情報を持ったHTSフルラベルファイルのパス'
+    )
     # 使わない引数は無視
     args, _ = parser.parse_known_args()
     # 実行引数を渡して処理
-    apply_velocities_to_timing_full_label(
-        path_full_timing=args.full_timing,
-        path_ust=args.ust
-    )
+    apply_velocities_to_timing_full_label(path_full_timing=args.full_timing, path_ust=args.ust)
     print('子音速度をタイミングラベルに反映しました。/ Applied velocity to timing.')
     print('-------------------------------------------------------')

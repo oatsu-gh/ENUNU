@@ -20,8 +20,14 @@ def pip_install_upgrade(python_exe: str, packages: List[str]):
     """
     pythonのパッケージを更新する
     """
-    args = [python_exe, '-m', 'pip', 'install', '--upgrade',
-            '--no-warn-script-location'] + packages
+    args = [
+        python_exe,
+        '-m',
+        'pip',
+        'install',
+        '--upgrade',
+        '--no-warn-script-location',
+    ] + packages
     subprocess.run(args, check=True)
 
 
@@ -31,7 +37,8 @@ def remove_cache_files(path_dir, remove_list):
     """
     # キャッシュフォルダを再帰的に検索
     dirs_to_remove = [
-        path for path in glob(join(path_dir, '**', '*'), recursive=True)
+        path
+        for path in glob(join(path_dir, '**', '*'), recursive=True)
         if (isdir(path) and basename(path) in remove_list)
     ]
     # キャッシュフォルダを削除
@@ -59,10 +66,14 @@ def create_install_txt(path_out: str, version: str):
     """
     プラグインの各フォルダに install.txt を作成する。
     """
-    s = '\n'.join(['type=editplugin',
-                   f'folder=ENUNU-{version}',
-                   f'contentsdir=ENUNU-{version}',
-                   'description=NNSVSモデルに歌ってもらうUTAUプラグイン'])
+    s = '\n'.join(
+        [
+            'type=editplugin',
+            f'folder=ENUNU-{version}',
+            f'contentsdir=ENUNU-{version}',
+            'description=NNSVSモデルに歌ってもらうUTAUプラグイン',
+        ]
+    )
     with open(path_out, 'w', encoding='cp932') as f:
         f.write(s)
 
@@ -71,8 +82,7 @@ def create_plugin_txt(path_out, version):
     """
     プラグインの各フォルダに plugin.txt を作成する。
     """
-    s = '\n'.join([f'name=ENUNU v{version} (&9)',
-                   r'execute=.\enunu.bat'])
+    s = '\n'.join([f'name=ENUNU v{version} (&9)', r'execute=.\enunu.bat'])
     with open(path_out, 'w', encoding='cp932') as f:
         f.write(s)
 
@@ -82,10 +92,7 @@ def copy_documents(path_out):
     markdownドキュメントをリリースフォルダにコピーして、
     txtファイルに変換する。
     """
-    documents = {'./../LICENSE',
-                 './../README.md',
-                 './../README_English.md',
-                 './../HISTORY.md'}
+    documents = {'./../LICENSE', './../README.md', './../README_English.md', './../HISTORY.md'}
 
     for old_path in documents:
         new_path = join(path_out, f'{basename(splitext(old_path)[0])}.txt')
@@ -113,8 +120,7 @@ def main():
     print('\n----------------------------------------------')
 
     # 配布物を入れるフォルダを新規作成する
-    enunu_release_dir = join(
-        '_release', f'ENUNU-{version}', f'ENUNU-{version}')
+    enunu_release_dir = join('_release', f'ENUNU-{version}', f'ENUNU-{version}')
     print(f'Making directory: {enunu_release_dir}')
     makedirs(enunu_release_dir)
 
@@ -146,7 +152,7 @@ def main():
 
     # enunu.bat をリリースフォルダに作成
     print('Creating enunu.bat')
-    create_enunu_bat(join(enunu_release_dir, 'enunu.bat'),  python_exe)
+    create_enunu_bat(join(enunu_release_dir, 'enunu.bat'), python_exe)
 
     # plugin.txt をリリースフォルダに作成
     print('Creating plugin.txt')

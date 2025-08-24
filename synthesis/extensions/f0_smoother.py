@@ -3,6 +3,7 @@
 """
 f0の極端に急峻な変化をなめらかにする拡張機能。
 """
+
 from argparse import ArgumentParser
 from copy import copy
 from math import cos, log10, pi
@@ -21,8 +22,8 @@ def repair_sudden_zero_f0(f0_list):
     """
     newf0_list = copy(f0_list)
     for i, f0 in enumerate(f0_list[1:-2], 1):
-        if all((f0 == 0, f0_list[i-1] != 0, f0_list[i+1] != 0)):
-            newf0_list[i] = (f0_list[i-1] + f0_list[i+1]) / 2
+        if all((f0 == 0, f0_list[i - 1] != 0, f0_list[i + 1] != 0)):
+            newf0_list[i] = (f0_list[i - 1] + f0_list[i + 1]) / 2
     return newf0_list
 
 
@@ -38,12 +39,12 @@ def repair_jaggy_f0(f0_list, ignore_threshold):
     # 不良検出
     for i, _ in enumerate(f0_list[2:-2], 2):
         # 計算する区間の両端のf0が無効なときはスキップ
-        if any((f0_list[i-1] == 0, f0_list[i] == 0, f0_list[i+1] == 0, f0_list[i+2] == 0)):
+        if any((f0_list[i - 1] == 0, f0_list[i] == 0, f0_list[i + 1] == 0, f0_list[i + 2] == 0)):
             continue
         # 1区間の音程変化
-        delta_1 = f0_list[i+1] - f0_list[i]
+        delta_1 = f0_list[i + 1] - f0_list[i]
         # 3区間の音程変化
-        delta_3 = f0_list[i+2] - f0_list[i-1]
+        delta_3 = f0_list[i + 2] - f0_list[i - 1]
         # ゼロ除算しそうなときはスキップ
         if delta_3 == 0:
             continue
@@ -53,16 +54,13 @@ def repair_jaggy_f0(f0_list, ignore_threshold):
         # 2点間の変化が、その前後の点の変化と逆を向いている場合を検出する。
         if delta_1 * delta_3 < 0:
             indices.append(i)
-    print("f0遷移方向が逆になっている区間: ", indices)
+    print('f0遷移方向が逆になっている区間: ', indices)
 
     # 修正すべき区間の周辺の点を直線を引いて(半ば強引に)修復
     for idx in indices:
-        newf0_list[idx - 1] = \
-            0.75 * newf0_list[idx - 2] + 0.25 * newf0_list[idx + 2]
-        newf0_list[idx] = \
-            0.5 * newf0_list[idx - 2] + 0.5 * newf0_list[idx + 2]
-        newf0_list[idx + 1] = \
-            0.25 * newf0_list[idx - 2] + 0.75 * f0_list[idx + 2]
+        newf0_list[idx - 1] = 0.75 * newf0_list[idx - 2] + 0.25 * newf0_list[idx + 2]
+        newf0_list[idx] = 0.5 * newf0_list[idx - 2] + 0.5 * newf0_list[idx + 2]
+        newf0_list[idx + 1] = 0.25 * newf0_list[idx - 2] + 0.75 * f0_list[idx + 2]
 
     return newf0_list
 
@@ -76,12 +74,12 @@ def get_rapid_f0_change_indices(f0_list: list, detect_threshold: list, ignore_th
     # f0のリスト内ループ
     for i, _ in enumerate(f0_list[1:-2], 1):
         # 計算する区間の両端のf0が無効なときはスキップ
-        if any((f0_list[i-1] == 0, f0_list[i] == 0, f0_list[i+1] == 0, f0_list[i+2] == 0)):
+        if any((f0_list[i - 1] == 0, f0_list[i] == 0, f0_list[i + 1] == 0, f0_list[i + 2] == 0)):
             continue
         # 1区間の音程変化
-        delta_1 = f0_list[i+1] - f0_list[i]
+        delta_1 = f0_list[i + 1] - f0_list[i]
         # 3区間の音程変化
-        delta_3 = f0_list[i+2] - f0_list[i-1]
+        delta_3 = f0_list[i + 2] - f0_list[i - 1]
         # ゼロ除算しそうなときはスキップ
         if delta_3 == 0:
             continue
@@ -153,7 +151,7 @@ def reduce_indices(indices):
     indices = copy(indices)
 
     for i, _ in enumerate(indices[:-1]):
-        delta = indices[i+1] - indices[i]
+        delta = indices[i + 1] - indices[i]
         if delta == 1:
             indices[i] = None
             indices[i + 1] = indices[i + 1] - 1
@@ -194,7 +192,7 @@ def get_adjusted_widths(f0_list: list, rapid_f0_change_indices: list, default_wi
         # 両端のf0が0な場合は、平滑化の幅を狭める。
         # ただし、wが負になって右側と左側のf0の位置が逆転する前にループを止める。
         # while width > 0 and (f0_list[f0_idx - width] == 0 or f0_list[f0_idx + width + 1] == 0):
-        while width > 0 and (0 in f0_list[f0_idx - width: f0_idx + width + 2]):
+        while width > 0 and (0 in f0_list[f0_idx - width : f0_idx + width + 2]):
             width -= 1
         # 調整後の値をリストに追加
         adjusted_widths.append(width)
@@ -239,53 +237,40 @@ def get_smoothened_f0_list(f0_list, width, detect_threshold, ignore_threshold):
 
     # 補正したほうがいい場所を検出する。
     rapid_f0_change_indices = get_rapid_f0_change_indices(
-        f0_list,
-        detect_threshold,
-        ignore_threshold
+        f0_list, detect_threshold, ignore_threshold
     )
     # rapid_f0_change_indices = reduce_indices(rapid_f0_change_indices)
 
     # 不具合が起きないように補正幅を調整
-    adjusted_widths = get_adjusted_widths(
-        f0_list,
-        rapid_f0_change_indices,
-        width
-    )
+    adjusted_widths = get_adjusted_widths(f0_list, rapid_f0_change_indices, width)
     assert len(rapid_f0_change_indices) == len(adjusted_widths)
 
     # 該当箇所の9区間の最初と最後の平均 (元の長さ: N-9, 追加後長さ: N-1)
     # ・-・-・-・-・=・-・-・-・-・
-    target_f0_list = get_target_f0_list(
-        f0_list,
-        rapid_f0_change_indices,
-        adjusted_widths
-    )
+    target_f0_list = get_target_f0_list(f0_list, rapid_f0_change_indices, adjusted_widths)
     assert len(rapid_f0_change_indices) == len(target_f0_list)
 
     # 動作内容確認用に出力
     # pprint(list(zip(rapid_f0_change_indices, adjusted_widths, target_f0_list)))
 
     # 検出済みの場所と、その周辺に適用するターゲット値の組でループする
-    for (f0_idx, width, target_f0) in zip(rapid_f0_change_indices, adjusted_widths, target_f0_list):
+    for f0_idx, width, target_f0 in zip(rapid_f0_change_indices, adjusted_widths, target_f0_list):
         # 調整不要(不可能)な場合はスキップ
         if width <= 0:
             continue
         # 修正必要なf0点の前後数点を、近くから順に補正する。
         for i in range(width):
             # 元の値をどのくらい使うか
-            ratio_of_original_f0 = cos(
-                pi * ((width - i) / (2 * width + 1)))
+            ratio_of_original_f0 = cos(pi * ((width - i) / (2 * width + 1)))
             # ターゲット値にどのくらい寄せるか
             ratio_of_target_f0 = 1 - ratio_of_original_f0
             # 過去側のf0の点を補正する
             f0_list[f0_idx - i] = (
-                ratio_of_target_f0 * target_f0 +
-                ratio_of_original_f0 * f0_list[f0_idx - i]
+                ratio_of_target_f0 * target_f0 + ratio_of_original_f0 * f0_list[f0_idx - i]
             )
             # 未来側のf0の点を補正する
             f0_list[f0_idx + i + 1] = (
-                ratio_of_target_f0 * target_f0 +
-                ratio_of_original_f0 * f0_list[f0_idx + i + 1]
+                ratio_of_target_f0 * target_f0 + ratio_of_original_f0 * f0_list[f0_idx + i + 1]
             )
 
     print(f'Smoothed {len(rapid_f0_change_indices)} points')
@@ -294,8 +279,7 @@ def get_smoothened_f0_list(f0_list, width, detect_threshold, ignore_threshold):
 
 
 def main():
-    """全体時の処理をやる
-    """
+    """全体時の処理をやる"""
     parser = ArgumentParser()
     parser.add_argument('--f0', help='f0の情報を持ったCSVファイルのパス')
 
@@ -305,7 +289,7 @@ def main():
     # f0ファイルの入出力パス
     # ENUNUからの呼び出しがうまくいっていないか、テスト実行の場合
     if args.f0 is None:
-        path_in = input('path: ').strip('\'\"')
+        path_in = input('path: ').strip('\'"')
         path_out = path_in.replace('.csv', '_out.csv')
     # ENUNUから呼び出しているとき
     else:
@@ -334,7 +318,7 @@ def main():
         log_f0_list,
         width=SMOOTHEN_WIDTH,
         detect_threshold=DETECT_THRESHOLD,
-        ignore_threshold=IGNORE_THRESHOLD
+        ignore_threshold=IGNORE_THRESHOLD,
     )
 
     # log(f0) でエラーが出ないためにf0=1Hzにしてあるのを0Hzに戻す。
@@ -344,7 +328,7 @@ def main():
         if log_f0 == 0:
             f0 = 0
         else:
-            f0 = 10 ** log_f0
+            f0 = 10**log_f0
         new_f0_list.append(f0)
 
     # 文字列にする
@@ -355,7 +339,7 @@ def main():
         f.write(s)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     print('f0_smoother.py (2022-04-24) ---------------------------')
     main()
     print('-------------------------------------------------------')

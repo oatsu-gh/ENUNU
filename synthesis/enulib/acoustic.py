@@ -29,6 +29,7 @@
 """
 発声タイミングの情報を持ったフルラベルから、WORLD用の音響特長量を推定する。
 """
+
 import hydra
 import joblib
 import numpy as np
@@ -68,11 +69,7 @@ def timing2acoustic(config: DictConfig, timing_path, acoustic_path):
     # 各種設定を読み込む
     model_config = OmegaConf.load(to_absolute_path(config[typ].model_yaml))
     model = hydra.utils.instantiate(model_config.netG).to(device)
-    checkpoint = torch.load(
-        config[typ].checkpoint,
-        map_location=lambda storage,
-        loc: storage
-    )
+    checkpoint = torch.load(config[typ].checkpoint, map_location=lambda storage, loc: storage)
 
     model.load_state_dict(checkpoint['state_dict'])
     in_scaler = joblib.load(config[typ].in_scaler_path)
@@ -96,18 +93,17 @@ def timing2acoustic(config: DictConfig, timing_path, acoustic_path):
     #     config[typ].question_path = config.question_path
     # --------------------------------------
     # hedファイルを辞書として読み取る。
-    binary_dict, continuous_dict = hts.load_question_set(
-        question_path, append_hat_for_LL=False)
+    binary_dict, continuous_dict = hts.load_question_set(question_path, append_hat_for_LL=False)
     # pitch indices in the input features
     # pitch_idx = len(binary_dict) + 1
-    pitch_indices = np.arange(len(binary_dict), len(binary_dict)+3)
+    pitch_indices = np.arange(len(binary_dict), len(binary_dict) + 3)
 
     # check force_clip_input_features (for backward compatibility)
     force_clip_input_features = True
     try:
         force_clip_input_features = config.acoustic.force_clip_input_features
     except:
-        logger.info(f"force_clip_input_features of {typ} is not set so enabled as default")
+        logger.info(f'force_clip_input_features of {typ} is not set so enabled as default')
 
     acoustic_features = predict_acoustic(
         device,
@@ -120,12 +116,8 @@ def timing2acoustic(config: DictConfig, timing_path, acoustic_path):
         continuous_dict,
         config.acoustic.subphone_features,
         pitch_indices,
-        config.log_f0_conditioning
+        config.log_f0_conditioning,
     )
 
     # csvファイルとしてAcousticの行列を出力
-    np.savetxt(
-        acoustic_path,
-        acoustic_features,
-        delimiter=','
-    )
+    np.savetxt(acoustic_path, acoustic_features, delimiter=',')

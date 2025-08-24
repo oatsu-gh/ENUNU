@@ -9,6 +9,8 @@
   - キャッシュフォルダでいいと思う。
 3. LABファイル→WAVファイル
 """
+
+import logging
 import sys
 import warnings
 from datetime import datetime
@@ -23,23 +25,74 @@ import colored_traceback.always  # pylint: disable=unused-import
 import utaupy
 from omegaconf import DictConfig, OmegaConf
 
-# ENUNUのフォルダ直下にあるenulibフォルダをimportできるようにする
-sys.path.append(dirname(__file__))
+# scikit-learn で警告が出るのを無視
 warnings.simplefilter('ignore')
+
+# my_package.my_moduleのみに絞ってsys.stderrにlogを出す
+logging.basicConfig(
+    stream=sys.stdout,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    level=logging.INFO,
+)
+logging.getLogger('enunu')
+
+
+# pylint: disable=C0411
+# pylint: disable=C0413
+# autopep8: off
+# ------------------------------------------------
+# ENUNUのフォルダ直下にあるフォルダやファイルをimportできるようにする
+sys.path.append(dirname(__file__))
+import enulib
+
 try:
-    import enulib
+    import torch
 except ModuleNotFoundError:
     print('----------------------------------------------------------')
     print('初回起動ですね。')
     print('PC環境に合わせてPyTorchを自動インストールします。')
     print('インストール完了までしばらくお待ちください。')
     print('----------------------------------------------------------')
-    from install_torch import pip_install_torch
-    pip_install_torch(join('.', 'python-3.8.10-embed-amd64', 'python.exe'))
+    enulib.install_torch.ltt_install_torch(sys.executable)
+    # enulib.install_torch.pip_install_torch(abspath(sys.executable))
     print('----------------------------------------------------------')
-    print('インストール成功しました。歌声合成を始めます。')
+    print('インストール成功しました。')
     print('----------------------------------------------------------\n')
-    import enulib
+    import torch
+
+# NNSVSをimportできるようにする
+if exists(join(dirname(__file__), 'nnsvs-master')):
+    sys.path.append(join(dirname(__file__), 'nnsvs-master'))
+elif exists(join(dirname(__file__), 'nnsvs')):
+    sys.path.append(join(dirname(__file__), 'nnsvs'))
+else:
+    logging.error('NNSVS directory is not found.')
+
+import nnsvs  # pylint: disable=import-error
+from nnsvs.svs import SPSVS
+from utils import enunu2nnsvs  # pylint: disable=import-error
+
+logging.debug('Imported NNSVS module: %s', nnsvs)
+
+# ------------------------------------------------
+# pylint: enable=C0411
+# pylint: enable=C0413
+# autopep8: on
+
+
+def get_project_path(path_utauplugin):
+    """
+    キャッシュパスとプロジェクトパスを取得する。
+    """
+    plugin = utaupy.utauplugin.load(path_utauplugin)
+    setting = plugin.setting
+    # ustのパス
+    path_ust = setting.get('Project')
+    # 音源フォルダ
+    voice_dir = setting['VoiceDir']
+    # 音声キャッシュのフォルダ(LABとJSONを設置する)
+    cache_dir = setting['CacheDir']
+    return path_ust, voice_dir, cache_dir
 
 
 def get_standard_function_config(config, key) -> Union[None, str]:
@@ -59,7 +112,7 @@ def get_extension_path_list(config, key) -> Union[None, List[str]]:
     config_extensions_something = config.extensions.get(key)
     if config_extensions_something is None:
         return None
-    if config_extensions_something == "":
+    if config_extensions_something == '':
         return None
     if isinstance(config_extensions_something, str):
         return [config_extensions_something]
@@ -67,24 +120,23 @@ def get_extension_path_list(config, key) -> Union[None, List[str]]:
         return list(config_extensions_something)
     # 空文字列でもNULLでもリストでも文字列でもない場合
     raise TypeError(
-        f'Extension path must be null or strings or list, not {type(config_extensions_something)} for {config_extensions_something}'
+        'Extension path must be null or strings or list, not '
+        f'{type(config_extensions_something)} for {config_extensions_something}'
     )
 
 
-def get_project_path(path_utauplugin):
+def run_extensions(l: list, extension_type: str, edit_labels=False, **kwargs) -> None:
     """
-    キャッシュパスとプロジェクトパスを取得する。
-    """
-    plugin = utaupy.utauplugin.load(path_utauplugin)
-    setting = plugin.setting
-    # ustのパス
-    path_ust = setting.get('Project')
-    # 音源フォルダ
-    voice_dir = setting['VoiceDir']
-    # 音声キャッシュのフォルダ(LABとJSONを設置する)
-    cache_dir = setting['CacheDir']
+    複数の拡張機能を一括実行する
 
-    return path_ust, voice_dir, cache_dir
+    Args:
+        l (list): 拡張機能のパスのリスト
+        extension_type (str): 拡張機能の種類 (ex. 'ust_editor', 'timing_editor')
+        edit_labels (bool, optional): フルラベルやタイミングラベルの編集を含むか否か。Defaults to False.
+    """
+    for path in l:
+        logging.info('Executing %s: %s', extension_type, basename(path))
+        enulib.extensions.run_an_extension(path, **kwargs)
 
 
 def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
@@ -160,10 +212,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     if extension_list is not None:
         for path_extension in extension_list:
             print(f'{datetime.now()} : editing UST with {path_extension}')
-            enulib.extensions.run_extension(
-                path_extension,
-                ust=path_temp_ust
-            )
+            enulib.extensions.run_extension(path_extension, ust=path_temp_ust)
 
     # フルラベル(score)生成----------------------------------------------------------
     converter = get_standard_function_config(config, 'ust_converter')
@@ -174,23 +223,19 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     elif converter == 'built-in':
         print(f'{datetime.now()} : converting UST to score with built-in function')
         enulib.utauplugin2score.utauplugin2score(
-            path_temp_ust,
-            path_temp_table,
-            path_full_score,
-            strict_sinsy_style=False
+            path_temp_ust, path_temp_table, path_full_score, strict_sinsy_style=False
         )
         # full_score から mono_score を生成
         enulib.common.full2mono(path_full_score, path_mono_score)
     # 外部ソフトでUST→LAB変換をする場合
     else:
-        print(
-            f'{datetime.now()} : converting UST to score with built-in function{converter}')
+        print(f'{datetime.now()} : converting UST to score with built-in function{converter}')
         enulib.extensions.run_extension(
             converter,
             ust=path_temp_ust,
             table=path_temp_table,
             full_score=path_full_score,
-            mono_score=path_mono_score
+            mono_score=path_mono_score,
         )
 
     # フルラベル(score)を加工-------------------------------------------------------
@@ -209,7 +254,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
                 ust=path_temp_ust,
                 table=path_temp_table,
                 full_score=path_full_score,
-                mono_score=path_mono_score
+                mono_score=path_mono_score,
             )
             # 変更後のモノラベルを読む
             with open(path_mono_score, encoding='utf-8') as f:
@@ -221,21 +266,14 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             # モノラベルが更新されている場合
             if enulib.extensions.str_has_been_changed(str_mono_old, str_mono_new):
                 # モノラベルの時刻をフルラベルに転写する。
-                enulib.extensions.merge_mono_time_change_to_full(
-                    path_mono_score,
-                    path_full_score
-                )
+                enulib.extensions.merge_mono_time_change_to_full(path_mono_score, path_full_score)
                 # モノラベルの音素記号をフルラベルに転写する。
                 enulib.extensions.merge_mono_contexts_change_to_full(
-                    path_mono_score,
-                    path_full_score
+                    path_mono_score, path_full_score
                 )
             # フルラベルに更新があった場合、フルラベルの時刻をモノラベルに転写する。
             else:
-                enulib.extensions.merge_full_time_change_to_mono(
-                    path_full_score,
-                    path_mono_score
-                )
+                enulib.extensions.merge_full_time_change_to_mono(path_full_score, path_mono_score)
 
     # フルラベル(timing) を生成 score.full -> timing.full-----------------
     calculator = get_standard_function_config(config, 'timing_calculator')
@@ -245,11 +283,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     # ENUNUの組み込み機能で計算する場合
     elif calculator == 'built-in':
         print(f'{datetime.now()} : calculating timing with built-in function')
-        enulib.timing.score2timing(
-            config,
-            path_full_score,
-            path_full_timing
-        )
+        enulib.timing.score2timing(config, path_full_score, path_full_timing)
         # フルラベルからモノラベルを生成
         enulib.common.full2mono(path_full_timing, path_mono_timing)
     # 外部ソフトで計算する場合
@@ -262,7 +296,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             full_score=path_full_score,
             mono_score=path_mono_score,
             full_timing=path_full_timing,
-            mono_timing=path_mono_timing
+            mono_timing=path_mono_timing,
         )
 
     # フルラベル(timing) を加工: timing.full -> timing.full----------------------
@@ -281,7 +315,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
                 full_score=path_full_score,
                 mono_score=path_mono_score,
                 full_timing=path_full_timing,
-                mono_timing=path_mono_timing
+                mono_timing=path_mono_timing,
             )
             # 変更後のモノラベルを読む
             with open(path_mono_timing, encoding='utf-8') as f:
@@ -291,10 +325,12 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             # NOTE: 歌詞は編集していないという前提で処理する。
             if enulib.extensions.str_has_been_changed(str_mono_old, str_mono_new):
                 enulib.extensions.merge_mono_time_change_to_full(
-                    path_mono_timing, path_full_timing)
+                    path_mono_timing, path_full_timing
+                )
             else:
                 enulib.extensions.merge_full_time_change_to_mono(
-                    path_full_timing, path_mono_timing)
+                    path_full_timing, path_mono_timing
+                )
 
     # 音響パラメータを推定 timing.full -> acoustic---------------------------
     calculator = get_standard_function_config(config, 'acoustic_calculator')
@@ -302,11 +338,9 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     if calculator is None:
         print(f'{datetime.now()} : skipped acoustic calculation')
     elif calculator == 'built-in':
-        print(
-            f'{datetime.now()} : calculating acoustic with built-in function')
+        print(f'{datetime.now()} : calculating acoustic with built-in function')
         # timing.full から acoustic.csv を作る。
-        enulib.acoustic.timing2acoustic(
-            config, path_full_timing, path_acoustic)
+        enulib.acoustic.timing2acoustic(config, path_full_timing, path_acoustic)
         # acoustic のファイルから f0, spectrogram, aperiodicity のファイルを出力
         enulib.world.acoustic2world(
             config,
@@ -314,20 +348,14 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             path_acoustic,
             path_f0,
             path_spectrogram,
-            path_aperiodicity
+            path_aperiodicity,
         )
-    elif calculator == "built-in-vocoder":
-        print(
-            f"{datetime.now()} : calculating acoustic with built-in-vocoder function")
+    elif calculator == 'built-in-vocoder':
+        print(f'{datetime.now()} : calculating acoustic with built-in-vocoder function')
         # timing.full から acoustic.csv を作る。
-        enulib.acoustic.timing2acoustic(
-            config,
-            path_full_timing,
-            path_acoustic
-        )
+        enulib.acoustic.timing2acoustic(config, path_full_timing, path_acoustic)
     else:
-        print(
-            f'{datetime.now()} : calculating acoustic with {calculator}')
+        print(f'{datetime.now()} : calculating acoustic with {calculator}')
         enulib.extensions.run_extension(
             calculator,
             ust=path_temp_ust,
@@ -339,7 +367,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             acoustic=path_acoustic,
             f0=path_f0,
             spectrogram=path_spectrogram,
-            aperiodicity=path_aperiodicity
+            aperiodicity=path_aperiodicity,
         )
 
     # 音響パラメータを加工: acoustic.csv -> acoustic.csv -------------------------
@@ -358,7 +386,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
                 acoustic=path_acoustic,
                 f0=path_f0,
                 spectrogram=path_spectrogram,
-                aperiodicity=path_aperiodicity
+                aperiodicity=path_aperiodicity,
             )
 
     # WORLDを使って音声ファイルを生成: acoustic.csv -> <songname>.wav--------------
@@ -372,24 +400,13 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
     elif synthesizer == 'built-in':
         print(f'{datetime.now()} : synthesizing WAV with built-in function')
         # WAVファイル出力
-        enulib.world.world2wav(
-            config,
-            path_f0,
-            path_spectrogram,
-            path_aperiodicity,
-            path_wav
-        )
+        enulib.world.world2wav(config, path_f0, path_spectrogram, path_aperiodicity, path_wav)
 
     # 組み込まれたVocoderで合成する場合
-    elif synthesizer == "vocoder":
-        print(f"{datetime.now()} : synthesizing WAV with vocoder model")
+    elif synthesizer == 'vocoder':
+        print(f'{datetime.now()} : synthesizing WAV with vocoder model')
         # timing.full から acoustic.csv を作る。
-        enulib.world.acoustic2vocoder_wav(
-            config,
-            path_full_timing,
-            path_acoustic,
-            path_wav
-        )
+        enulib.world.acoustic2vocoder_wav(config, path_full_timing, path_acoustic, path_wav)
 
     # 別途指定するソフトで合成する場合
     else:
@@ -405,7 +422,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
             acoustic=path_acoustic,
             f0=path_f0,
             spectrogram=path_spectrogram,
-            aperiodicity=path_aperiodicity
+            aperiodicity=path_aperiodicity,
         )
 
     # 音声ファイルを加工: <songname>.wav -> <songname>.wav
@@ -424,7 +441,7 @@ def main_as_plugin(path_plugin: str, path_wav: Union[str, None]) -> str:
                 acoustic=path_acoustic,
                 f0=path_f0,
                 spectrogram=path_spectrogram,
-                aperiodicity=path_aperiodicity
+                aperiodicity=path_aperiodicity,
             )
 
     # print(f'{datetime.now()} : converting LAB to JSON')

@@ -3,17 +3,17 @@
 """
 ENUNU用の歌唱データベースの音素データを、分析しやすい形式のCSVファイルにまとめる。
 """
+
 from glob import glob
 from os import makedirs
 from os.path import basename, dirname, join, splitext
 from shutil import copy2
-from typing import List
 
 import pandas
 import utaupy
 from tqdm import tqdm
 
-DEFAULT_TABLE_PATH = 'kana2phonemes_003_oto2lab.table'
+DEFAULT_TABLE_PATH = join(dirname(__file__), 'kana2phonemes_etk_001.table')
 
 
 def compare_mono_and_full(path_mono, path_full) -> None:
@@ -79,13 +79,17 @@ def merge_rests_full(path_hts_in, path_hts_out):
     prev_note = first_note
     for note in song[1:]:
         # 転調したり拍子やテンポが変わっていない場合のみ実行
-        if all((note.is_rest(),
+        if all(
+            (
+                note.is_rest(),
                 prev_note.is_rest(),
                 note.beat == prev_note.beat,
                 note.tempo == prev_note.tempo,
                 note.key == prev_note.key,
                 note.length != 'xx',
-                prev_note.length != 'xx')):
+                prev_note.length != 'xx',
+            )
+        ):
             # 直前のノート(休符)の長さを延長する
             prev_note.length = int(prev_note.length) + int(note.length)
         # 拍子が変わっていたり、音符だった場合は普通に追加
@@ -101,7 +105,7 @@ def mono2csv(path_mono_lab, path_csv):
     """
     モノラベルをcsvに変換して保存する。
     """
-    with open(path_mono_lab, 'r', encoding='utf-8') as f:
+    with open(path_mono_lab, encoding='utf-8') as f:
         s = f.read()
     # 区切り文字をコンマにする
     s = s.replace(' ', ',')
@@ -114,35 +118,34 @@ def mono2csv(path_mono_lab, path_csv):
         f.write(s)
 
 
-def unify_csv_files(mono_csv_files: List[str], full_csv_files: List[str], path_csv_out):
+def unify_csv_files(mono_csv_files: list[str], full_csv_files: list[str], path_csv_out):
     """
     複数のCSVファイルを1ファイルに統合する。
     """
     mono_csv_files = sorted(mono_csv_files)
     full_csv_files = sorted(full_csv_files)
-    lines_concat: List[str] = []
+    lines_concat: list[str] = []
 
     header = 'songname'
-    with open(mono_csv_files[0], 'r', encoding='utf-8') as f_mono:
+    with open(mono_csv_files[0], encoding='utf-8') as f_mono:
         header += ',' + f_mono.read().splitlines()[0]
-    with open(full_csv_files[0], 'r', encoding='utf-8') as f_full:
+    with open(full_csv_files[0], encoding='utf-8') as f_full:
         header += ',' + f_full.read().splitlines()[0]
     lines_concat.append(header)
 
     for path_mono_csv, path_full_csv in zip(tqdm(mono_csv_files), full_csv_files):
         songname = splitext(basename(path_mono_csv))[0]
         # CSVを読み取る
-        with open(path_mono_csv, 'r', encoding='utf-8') as f:
+        with open(path_mono_csv, encoding='utf-8') as f:
             lines_mono = f.read().splitlines()[1:]
-        with open(path_full_csv, 'r', encoding='utf-8') as f:
+        with open(path_full_csv, encoding='utf-8') as f:
             lines_full = f.read().splitlines()[1:]
         # 音素数が一致するかチェック
         if len(lines_mono) != len(lines_full):
-            raise ValueError(
-                f'モノラベルとフルラベルの音素数が一致しません。({songname})'
-            )
+            raise ValueError(f'モノラベルとフルラベルの音素数が一致しません。({songname})')
         lines_concat += [
-            f'{songname},{line_mono},{line_full}' for line_mono, line_full in zip(lines_mono, lines_full)
+            f'{songname},{line_mono},{line_full}'
+            for line_mono, line_full in zip(lines_mono, lines_full)
         ]
 
     s = '\n'.join(lines_concat).replace('xx', '')
