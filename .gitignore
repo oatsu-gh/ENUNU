@@ -2,7 +2,32 @@
 /venv
 /test
 /server_start.ps1
-/pyproject.toml
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+.tox/
+
+# Claude Code
+.claude/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+env/
+ENV/
+
+# IDE files
+.idea/
+*.swp
+*.swo
+*~
 
 *.exe
 *.log
