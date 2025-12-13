@@ -7,13 +7,14 @@
 from argparse import ArgumentParser
 
 import utaupy
+from tqdm import tqdm
 
 
 def repair_label(path_label, time_unit=50000):
     """発声開始時刻が直前のノートの発声開始時刻より早くなっている音素を直す。"""
     label = utaupy.label.load(path_label)
     previous_start = label[0].start
-    for phoneme in label:
+    for phoneme in tqdm(label):
         current_start = phoneme.start
         phoneme.start = max(previous_start + time_unit, current_start)
         previous_start = current_start
