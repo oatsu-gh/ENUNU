@@ -30,7 +30,6 @@ from os.path import (
 from shutil import move
 from tempfile import TemporaryDirectory, mkdtemp
 from tkinter.filedialog import asksaveasfilename
-from typing import Union
 from collections.abc import Iterable
 import numpy as np
 import utaupy
@@ -68,29 +67,6 @@ if find_spec('torch') is None:
     print('----------------------------------------------------------\n')
 import torch  # noqa: E402
 
-# nnsvs などのモジュールを import できるか確認する --------------------------
-_special_packages = {
-    'nnsvs': [
-        'https://github.com/oatsu-gh/nnsvs',
-        'https://github.com/nnsvs/nnsvs',
-    ],
-    'usfgan': [
-        'https://github.com/oatsu-gh/HN-UnifiedSourceFilterGAN',
-        'https://github.com/nnsvs/HN-UnifiedSourceFilterGAN',
-    ],
-    'parallel_wavegan': [
-        'https://github.com/oatsu-gh/ParallelWaveGAN',
-        'https://github.com/nnsvs/ParallelWaveGAN',
-    ],
-    'sifigan': [
-        'https://github.com/nnsvs/SiFiGAN',
-    ],
-}
-
-for pkg_name, pkg_url in _special_packages.items():
-    if find_spec(pkg_name) is None:
-        msg = f'Pakcage "{pkg_name}" is not installed. Please install it from {pkg_url}.'
-        raise ModuleNotFoundError(msg)
 
 # nnsvs 関連を import する ---------------------------------------------------
 import nnsvs  # noqa: E402
@@ -592,7 +568,7 @@ class ENUNU(SPSVS):
         return wav, self.sample_rate
 
 
-def main(path_plugin: str, path_wav: Union[str, None] = None, play_wav: bool = False) -> str:
+def main(path_plugin: str, path_wav: str | None = None, play_wav: bool = False) -> str:
     """
     UTAUプラグインのファイルから音声を生成する
     """
