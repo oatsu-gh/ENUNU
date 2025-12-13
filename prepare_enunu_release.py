@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2021 oatsu
+# Copyright (c) 2023-2025 oatsu
 """
 ENUNUのリリース準備をする
 """
@@ -7,16 +7,16 @@ ENUNUのリリース準備をする
 import shutil
 import subprocess
 from glob import glob
-from os import makedirs
+from os import chdir, makedirs
 from os.path import basename, dirname, exists, isdir, join, splitext
-from typing import List
+from shutil import make_archive
 
-KEEP_LATEST_PACKAGES = ['pip', 'setuptools', 'wheel', 'utaupy']
+KEEP_LATEST_PACKAGES = ['pip', 'setuptools', 'wheel', 'utaupy', 'light-the-torch']
 REMOVE_LIST = ['__pycache__', '.mypy']
-PYTHON_DIR = 'python-3.8.10-embed-amd64'
+PYTHON_DIR = 'python-3.12.10-embed-amd64'
 
 
-def pip_install_upgrade(python_exe: str, packages: List[str]):
+def pip_install_upgrade(python_exe: str, packages: list[str]):
     """
     pythonのパッケージを更新する
     """
@@ -28,7 +28,7 @@ def pip_install_upgrade(python_exe: str, packages: List[str]):
         '--upgrade',
         '--no-warn-script-location',
     ] + packages
-    subprocess.run(args, check=True)
+    subprocess.run(args, check=True)  # noqa: S603
 
 
 def remove_cache_files(path_dir, remove_list):
@@ -53,11 +53,15 @@ def copy_python_dir(python_dir, enunu_release_dir):
     shutil.copytree(python_dir, join(enunu_release_dir, python_dir))
 
 
-def create_enunu_bat(path_out: str, python_exe: str):
+def create_enunu_bat(path_out: str, python_exe: str, version: str):
     """
     プラグインの各フォルダに enunu.bat を作成する。
     """
-    s = f'@echo off\n\n{python_exe} enunu.py %*\n\nPAUSE\n'
+    s = (
+        '@echo off\n\n'
+        + f'echo _____ ENUNU v{version} ________\n'
+        + f'{python_exe} enunu.py %1 --play\n\nPAUSE\n'
+    )
     with open(path_out, 'w', encoding='cp932') as f:
         f.write(s)
 
@@ -87,22 +91,22 @@ def create_plugin_txt(path_out, version):
         f.write(s)
 
 
-def copy_documents(path_out):
+def copy_documents(out_dir):
     """
     markdownドキュメントをリリースフォルダにコピーして、
     txtファイルに変換する。
     """
-    documents = {'./../LICENSE', './../README.md', './../README_English.md', './../HISTORY.md'}
+    documents = {
+        './LICENSE.txt',
+        './README.md',
+        './HISTORY.md',
+        './pyproject.toml',
+        './requirements.txt',
+    }
 
     for old_path in documents:
-        new_path = join(path_out, f'{basename(splitext(old_path)[0])}.txt')
-        with open(old_path, 'r', encoding='utf-8') as f:
-            s = f.read()
-        if old_path.endswith('.md'):
-            s = s.replace('\\', '')
-        # markdownからバックスラッシュを除く
-        with open(new_path, 'w', encoding='utf-8') as f:
-            f.write(s)
+        new_path = join(out_dir, basename(old_path))
+        shutil.copy2(old_path, new_path)
 
 
 def main():
@@ -139,10 +143,10 @@ def main():
     print(f'Copying {python_dir} -> {join(enunu_release_dir, python_dir)}')
     shutil.copytree(python_dir, join(enunu_release_dir, python_dir))
 
-    # enunu.py と hts2wav.py と nnsvs_gen_override.py をコピーする
-    print('Copying python scripts')
+    # なんかいろいろコピーする
+    print('Copying scripts')
     shutil.copy2('enunu.py', join(enunu_release_dir))
-    shutil.copy2('install_torch.py', join(enunu_release_dir))
+    shutil.copy2('repair_packages.bat', join(enunu_release_dir))
     shutil.copytree('enulib', join(enunu_release_dir, 'enulib'))
     shutil.copytree('extensions', join(enunu_release_dir, 'extensions'))
 
@@ -152,7 +156,7 @@ def main():
 
     # enunu.bat をリリースフォルダに作成
     print('Creating enunu.bat')
-    create_enunu_bat(join(enunu_release_dir, 'enunu.bat'), python_exe)
+    create_enunu_bat(join(enunu_release_dir, 'enunu.bat'), python_exe, version)
 
     # plugin.txt をリリースフォルダに作成
     print('Creating plugin.txt')
@@ -162,9 +166,14 @@ def main():
     path_install_txt = join(dirname(enunu_release_dir), 'install.txt')
     create_install_txt(path_install_txt, version)
 
+    # zip圧縮する
+    print('Making ZIP archive')
+    make_archive(dirname(enunu_release_dir), format='zip', root_dir=dirname(enunu_release_dir))
+
     print('\n----------------------------------------------')
 
 
 if __name__ == '__main__':
+    chdir(dirname(__file__))
     main()
     input('Press Enter to exit.')
