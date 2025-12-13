@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from glob import glob
 from os import chdir, makedirs
-from os.path import basename, dirname, exists, isdir, join, splitext
+from os.path import basename, dirname, exists, isdir, join
 from shutil import make_archive
 
 KEEP_LATEST_PACKAGES = ['pip', 'setuptools', 'wheel', 'utaupy', 'light-the-torch']
