@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 # Copyright (c) 2023-2025 oatsu
 """
 1. UTAUプラグインのテキストファイルを読み取る。
