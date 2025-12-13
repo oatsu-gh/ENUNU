@@ -1,19 +1,12 @@
-/.vscode
-/venv
-/test
-/server_start.ps1
-/pyproject.toml
+__pycache__
 
-*.exe
-*.log
-*.wav
-*.pth
 *.cache
 *.csv
-*.zip
-#data
-dump
-outputs
-release
-__pycache__
+*.exe
 *.lnk
+*.log
+*.pth
+*.pyc
+*.wav
+*.xlsx
+*.zip
