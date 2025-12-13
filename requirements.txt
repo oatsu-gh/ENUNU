@@ -11,8 +11,8 @@ pyyaml
 tqdm
 
 # Install from GitHub -----------------
-git+https://github.com/oatsu-gh/nnmnkwii@enunu-python12
-git+https://github.com/oatsu-gh/nnsvs@enunu-python12
-git+https://github.com/oatsu-gh/HN-UnifiedSourceFilterGAN@enunu-python12
-git+https://github.com/oatsu-gh//ParallelWaveGAN@enunu-python12
+git+https://github.com/oatsu-gh/nnmnkwii@enunu-python312
+git+https://github.com/oatsu-gh/nnsvs@enunu-python312
+git+https://github.com/oatsu-gh/HN-UnifiedSourceFilterGAN@enunu-python312
+git+https://github.com/oatsu-gh//ParallelWaveGAN@enunu-python312
 git+https://github.com/nnsvs/SiFiGAN
