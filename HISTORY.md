@@ -162,5 +162,16 @@
 
 ## v1.0.0 (2025-12-14)
 
-- SimpleEnunu 0.6.0 をベースにして最新のNNSVS向けに改修。
+- SimpleEnunu 0.6.0 をベースにして最新のNNSVS向けに改修。これに伴い、拡張機能で設定できる項目が減少。
+  - 引き続き使用可能
+    - `ust_editor`
+    - `score_editor`
+    - `timing_editor`
+    - `acoustic_editor`
+  - 使用不可
+    - `ust_converter`
+    - `timing_calculator`
+    - `acoustic_calculator`
+    - `wav_synthesizer`
+    - `wav_editor`
 - enunu_training_kit >= 2.0.0 で作成したモデルに対応。
