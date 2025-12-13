@@ -1,1 +1,1 @@
-from enulib import acoustic, common, extensions, timing, utauplugin2score, world  # noqa: F401
+from . import enunu2nnsvs, extensions, install_torch, utauplugin2score  # noqa: F401

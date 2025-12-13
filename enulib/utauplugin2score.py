@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-# Copyright (c) 2022 oatsu
+# Copyright (c) 2022-2023 oatsu
 """
 TMPファイル(UTAUプラグインに渡されるUST似のファイル) を
 フルラベル(full_score)とモノラベル(mono_score)に変換する。
 """
-
 import utaupy
 
 
