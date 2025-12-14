@@ -4,50 +4,52 @@
 light-the-torch を使って pytorch をインストールする。
 """
 
+import subprocess
 
-def ltt_install_torch():
-    """
-    python -m light_the_torch install torch torchaudio torchvision
-    """
-    import pip
-    import light_the_torch as ltt
 
-    # upgrade ltt
-    pip.main(
-        [
-            "install",
-            "--upgrade",
-            "light-the-torch",
-            "--no-warn-script-location",
-            "--disable-pip-version-check",
-        ]
-    )
-    # Install pytorch
-    ltt.main(
-        [
-            "install",
-            "--upgrade",
-            "torch",
-            "torchaudio",
-            "torchvision",
-            "--no-warn-script-location",
-            "--disable-pip-version-check",
-        ]
-    )
+def ltt_install_torch(python_exe):
+    """
+    python -m pip install --upgrade light_the_torch
+    python -m light_the_torch install --upgrade torch torchaudio torchvision
+    """
+    # Upgrade ltt
+    command_1 = [
+        python_exe,
+        '-m',
+        'pip',
+        'install',
+        '--upgrade',
+        'light_the_torch',
+        '--no-warn-script-location',
+        '--disable-pip-version-check',
+    ]
+    subprocess.run(command_1, check=True)  # noqa: S603
+
+    # Install PyTorch
+    command_2 = [
+        python_exe,
+        '-m',
+        'light_the_torch',
+        'install',
+        '--upgrade',
+        'torch',
+        'torchaudio',
+        'torchvision',
+        '--no-warn-script-location',
+        '--disable-pip-version-check',
+    ]
+    subprocess.run(command_2, check=True)  # noqa: S603
 
 
 def main():
     """
     インストールを実行する
     """
-    if (
-        input(
-            "インストールされているpytorchを上書きしてもいいですか？(YES/NO): "
-        ).upper()
-        == "YES"
-    ):
-        ltt_install_torch()
+    import sys
+
+    if input('インストールされているpytorchを上書きしてもいいですか？(YES/NO): ').upper() == 'YES':
+        ltt_install_torch(sys.executable)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
