@@ -51,7 +51,7 @@ def get_vibrato_start_times(ust: Ust):
     USTを読み取ってビブラートの開始時刻のリストを返す。
     """
     t_total_ms = 0  # [ms]
-    l = []
+    vib_start_times = []
     for note in ust.notes:
         note_length_ms = note.length_ms
         t_total_ms += note_length_ms
@@ -63,9 +63,9 @@ def get_vibrato_start_times(ust: Ust):
         # ビブラートの開始時刻を計算
         vibrato_start_time = round(t_total_ms - vibrato_duration_ms)
         # ビブラートの開始時刻をリストに追加
-        l.append(vibrato_start_time)
+        vib_start_times.append(vibrato_start_time)
     # ビブラートの開始時刻のリストを返す
-    return l
+    return vib_start_times
 
 
 def get_vibrato_shapes(ust: Ust):
@@ -95,8 +95,9 @@ def get_vibrato_shapes(ust: Ust):
         for t in range(int(vibrato_duration)):
             # 位相を考慮した正弦波の計算
             phase_adjusted_time = (t + vibrato_phase) % vibrato_period
-            vibrato_value = vibrato_depth * \
-                math.sin((2 * math.pi) * (phase_adjusted_time / vibrato_period))
+            vibrato_value = vibrato_depth * math.sin(
+                (2 * math.pi) * (phase_adjusted_time / vibrato_period)
+            )
             # フェードインの処理
             if t <= vibrato_fade_in:
                 vibrato_value *= t / vibrato_fade_in
@@ -143,20 +144,21 @@ def load_f0_file(path_f0):
     """f0のファイルを読み取り、f0のリストを返す。
     ファイルは1行に1つのf0値が書かれていると仮定する。
     """
-    with open(path_f0, 'r', encoding='utf-8') as f:
+    with open(path_f0, encoding='utf-8') as f:
         f0_list = list(map(float, f.read().splitlines()))
     return f0_list
 
 
 def switch_mode(ust) -> str:
-    """どのタイミングで起動されたかを、USTから調べて動作モードを切り替える。
-    """
+    """どのタイミングで起動されたかを、USTから調べて動作モードを切り替える。"""
     if MODE_SWITCH_KEY in ust.setting:
         return 'acoustic_editor'
     return 'ust_editor'
 
 
-def calc_and_export_vibrato_shapes(path_ust: str, path_delta_f0_cent_out: str, f0_time_unit_ms: int = 5):
+def calc_and_export_vibrato_shapes(
+    path_ust: str, path_delta_f0_cent_out: str, f0_time_unit_ms: int = 5
+):
     """
     USTからビブラートの形状を計算し、Δf0[cent]のファイルに出力する。
     Δf0のファイルが出力済みであることを示すため、
@@ -174,12 +176,13 @@ def calc_and_export_vibrato_shapes(path_ust: str, path_delta_f0_cent_out: str, f
     # ビブラートの個数が一致することを確認する
     print(f'ビブラート形状のリストの要素数: {len(vibrato_shapes)}')
     print(f'ビブラート開始時刻のリストの要素数: {len(vibrato_start_times)}')
-    assert len(vibrato_start_times) == len(vibrato_shapes), \
+    assert len(vibrato_start_times) == len(vibrato_shapes), (
         f'ビブラート開始時刻のリスト({len(vibrato_start_times)}) と ビブラート形状のリスト({len(vibrato_shapes)}) の要素数が一致しません。'
+    )
 
     # ベースラインにビブラートの形状を加算する
-    for t, shape in zip(vibrato_start_times, vibrato_shapes):
-        vibrato_heights[t:t + len(shape)] = shape
+    for t, shape in zip(vibrato_start_times, vibrato_shapes, strict=False):
+        vibrato_heights[t : t + len(shape)] = shape
     # NNSVSのf0は5ms刻みなので5つごとに間引く。
     vibrato_heights = vibrato_heights[::f0_time_unit_ms]
 
@@ -218,7 +221,7 @@ def apply_vibrato_to_f0(path_f0_in: str, path_f0_out: str, path_delta_f0_cent: s
     # f0 にビブラートを加算する。ただし、f0 = 0Hz (f0_cent=0) の時は無声部分なのでビブラートを無視する。
     f0_cent_list = [
         f0_cent + delta if f0_cent > 0 else f0_cent
-        for f0_cent, delta in zip(f0_cent_list, delta_f0_cent_list)
+        for f0_cent, delta in zip(f0_cent_list, delta_f0_cent_list, strict=False)
     ]
 
     # f0 を cent から Hz に戻す
@@ -253,17 +256,15 @@ def main(path_f0_in: str, path_f0_out: str, path_ust: str):
         result = calc_and_export_vibrato_shapes(path_ust, path_delta_f0_cent)
     elif mode == 'acoustic_editor':
         # f0 と Δf0_cent を読み取ってf0ファイルを加工する
-        result = apply_vibrato_to_f0(
-            path_f0_in, path_f0_out, path_delta_f0_cent)
+        result = apply_vibrato_to_f0(path_f0_in, path_f0_out, path_delta_f0_cent)
     return result
 
 
 def test():
-    """テスト用の関数。input関数でUSTファイルを指定して読み込み、ビブラートの形状を計算して表示する。
-    """
+    """テスト用の関数。input関数でUSTファイルを指定して読み込み、ビブラートの形状を計算して表示する。"""
     # f0のCSVファイルのパスを指定して読み込む
     f0_list = load_f0_file(input('f0のCSVファイルのパス: ').strip())
-    print("ビブラートの形状を計算します。USTファイルを指定してください。")
+    print('ビブラートの形状を計算します。USTファイルを指定してください。')
     # USTファイルを読み込む
     ust = utaupy.ust.load(input('USTファイルのパス: ').strip())
     vibrato_start_times = get_vibrato_start_times(ust)
@@ -273,16 +274,18 @@ def test():
     print(f'length of f0_list: {len(f0_list)}')
     print(f'length of baseline: {len(baseline)}')
 
-    assert len(vibrato_start_times) == len(vibrato_shapes), \
+    assert len(vibrato_start_times) == len(vibrato_shapes), (
         f'ビブラート開始時刻のリスト({len(vibrato_start_times)}) と ビブラート形状のリスト({len(vibrato_shapes)}) の要素数が一致しません。'
+    )
 
     # ベースラインにビブラートの形状を加算する
-    for t, shape in zip(vibrato_start_times, vibrato_shapes):
-        baseline[t:t + len(shape)] = shape
+    for t, shape in zip(vibrato_start_times, vibrato_shapes, strict=False):
+        baseline[t : t + len(shape)] = shape
     # f0 は 5ms 刻みなので5つごとに間引く。
     baseline = baseline[::5]
     # baselineを matplib でプロットする
     import matplotlib.pyplot as plt
+
     plt.plot(baseline)
     plt.title('Vibrato Shapes')
     plt.xlabel('Time [ms]')

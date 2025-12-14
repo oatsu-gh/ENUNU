@@ -8,7 +8,7 @@ USTに記載されている子音速度を用いて、timingラベルの子音�
 
 from argparse import ArgumentParser
 
-import colored_traceback.always  # pylint: disable=unused-import
+import colored_traceback.always  # noqa: F401
 import utaupy
 
 
@@ -45,7 +45,7 @@ def apply_velocities_to_timing_full_label(path_full_timing, path_ust):
     # 子音速度を取得する
     velocities = get_velocities(ust)
     # 子音の長さを加工していく。
-    for hts_note, velocity in zip(song.all_notes, velocities):
+    for hts_note, velocity in zip(song.all_notes, velocities, strict=True):
         phoneme = hts_note.phonemes[0]
         # 最初の音素が子音だった場合、子音速度に応じて長さを調節する。
         if phoneme.is_consonant():
