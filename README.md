@@ -6,16 +6,25 @@ NNSVS用歌声モデルをUTAU音源みたいに使えるようにするUTAUプ�
 
 [UTAUでNNSVSモデルを使おう！（ENUNU）](https://note.com/crazy_utau/n/n45db22b33d2c)
 
-## 使い方
+## 利用規約 - Terms of use 
 
-1. USTを開き、ENUNU用モデルを含むUTAU音源を原音ファイルセットに設定する。
-   例）「おふとんP (ENUNU)」・・・ENUNU向けのNNSVS用おふとんP歌声モデル
-2. USTの歌詞をひらがな単独音にする。
-3. 再生したい部分を選択し、プラグインとしてENUNUを起動する。
-4. ～ 数秒か数分待つ ～
-5. 選択部分のWAVファイルがUSTファイルと同一フォルダに生成される。
+利用時は各キャラクターの規約に従ってください。尚、本ソフトウェアの規約は LICENSE ファイルとして別途同梱しています。
 
-## 使い方ヒント
+## インストール方法 - Installation
+
+UTAU を起動し、**ENUNU-{version}.zip** をUTAUのウィンドウにドラッグアンドドロップしてください。
+
+## 使い方 - Usage
+
+1. UST を開く。
+2. UTAU 音源として ENUNU 用のモデルを指定するか、NNSVS 用のモデルを含むフォルダを選択する。
+3. UST の歌詞をひらがな単独音にする。
+4. UST ファイルを保存する。
+5. ノートを2つ以上選択してプラグイン一覧から ENUNU を起動する。
+6. ～ 数秒か数分待つ ～
+7. 生成された WAV ファイルを保存する。
+
+### 使い方ヒント
 
 - 2021年以前に配布された日本語モデルでは、促音(っ)は、直前のノートに含めることをお勧めします。
   - さっぽろ → \[さっ]\[ぽ]\[ろ]
@@ -28,11 +37,50 @@ NNSVS用歌声モデルをUTAU音源みたいに使えるようにするUTAUプ�
 - 音素の直接入力により、1ノート内に2音節以上を含めることができます。
   - \[さっ]\[ぽ]\[ろ] → \[さっ]\[p o r o]
 
-## 利用規約
+## 拡張機能について - Extensions
 
-利用時は各キャラクターの規約に従ってください。また、本ソフトウェアの規約は LICENSE ファイルとして別途同梱しています。
+### 拡張機能の使い方
 
+- `%e` : SimpleEnunu のフォルダ
+- `%v` : SimpleEnunu 用モデルのフォルダ
+- `%u` : UTAU のフォルダ
 
+```yaml
+# config.yaml example to activate extensions
+extensions:
+    ust_editor: "%e/extensions/voicecolor_applier/voicecolor_applier.py"
+    timing_editor:
+      - "%e/extensions/timing_repairer.py"
+      - "%e/extensions/velocity_applier.py"
+    acoustic_editor: "%e/extensions/f0_smoother.py"
+```
+
+### 拡張機能一覧
+
+#### ust_editor (UST を編集する機能)
+
+- voicecolor_applier : `あ強` などの表情サフィックスを使用可能にします。（例：`強` が含まれる場合は `Power` をフラグ欄に追記します。）
+- lyric_nyaizer (ust_editor) : 歌詞を `ny a` にします。主にデバッグ用です。
+
+#### score_editor (フルラベルを編集する機能)
+- score_myaizer : 歌詞を `my a` にします。主にデバッグ用です。
+
+#### timing_editor (タイミングラベルを編集する機能)
+- timing_repairer : ラベル内の音素の発声時間に不具合がある場合に自動修正を試みます。
+- velocity_applier : USTの子音速度をもとに子音の長さを調節します。
+
+#### acoustic_editor (f0 などを編集する機能)
+- f0_feedbacker : ENUNUモデルで合成したピッチ線を UST のピッチにフィードバックします。EnuPitch のようなことができます。
+- f0_smoother : 急峻なピッチ変化を滑らかにします。
+
+#### 複合
+- style_shifter (ust_editor, acoustic_editor) : USTのフラグ に `S5` や `S-3` のように記入することで、スタイルシフトのようなことができます。
+- vibrato_applier (ust_editor, acoustic_editor) : USTのビブラートを f0 に反映します。
+
+#### その他
+- dummy : とくに何もしません。デバッグ用です。
+
+### 
 
 ---
 
@@ -45,13 +93,8 @@ NNSVS用歌声モデルをUTAU音源みたいに使えるようにするUTAUプ�
 ## 開発環境
 
 - Windows 10
-- Python 3.8（3.9はPytorchが未対応）
-  - utaupy 1.18.0
-  - numpy 1.21.2（1.19.4 はWindowsのバグで動かない）
-  - torch 1.8.0+cu113
-  - nnsvs 開発バージョン
-  - nnmnkwii
-- CUDA 11.3
+- Python 3.12
+- CUDA 13.0
 
 ## ENUNU向けUTAU音源フォルダの作り方
 
@@ -77,4 +120,3 @@ NNSVS用歌声モデルをUTAU音源みたいに使えるようにするUTAUプ�
   - Sinsyの仕様では、休符の直前のノートが持つ「次のノート」の情報は休符終了後のノートを指しますが、本ツールでは休符を指す設計としています。
   - 休符の直後のノートも同様に、休符開始前ではなく休符そのものを指す設計としています。
   - 音節も同様です。
-

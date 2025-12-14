@@ -1,0 +1,14 @@
+[tool.ruff]
+line-length = 99
+
+[tool.ruff.lint]
+# Enable All rules.
+# We may not want all rules, but this is a good starting point for you to
+# see the full capabilities of ruff
+ignore = ['I001', 'C901', 'S101', 'T2', 'PTH', 'D', 'ANN', 'Q000', 'RET504']
+select = ['ALL']
+
+# Configure single quotes
+[tool.ruff.format]
+line-ending = 'lf'
+quote-style = 'single'

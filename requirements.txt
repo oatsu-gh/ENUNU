@@ -1,11 +1,18 @@
-hydra-core<1.1
-joblib
-nnmnkwii >= 0.0.23
-nnsvs
-numpy >= 1.20
-omegaconf
-scipy
-torch
-tqdm
-utaupy >= 1.10
+# Install from PyPI
+numpy<2
+colored_traceback
+cython
+h5py
+hydra-core
+light-the-torch
+utaupy
+pyworld
 pyyaml
+tqdm
+
+# Install from GitHub -----------------
+git+https://github.com/oatsu-gh/nnmnkwii@enunu-python312
+git+https://github.com/oatsu-gh/nnsvs@enunu-python312
+git+https://github.com/oatsu-gh/HN-UnifiedSourceFilterGAN@enunu-python312
+git+https://github.com/oatsu-gh//ParallelWaveGAN@enunu-python312
+git+https://github.com/nnsvs/SiFiGAN

@@ -149,13 +149,30 @@
   - ほか動作に影響なさそうなライブラリ
 - scikit-learn はバージョンアップで不具合が出るので据え置き
 
-# v0.6.0 (2022-09-25)
+## v0.6.0 (2022-09-25)
 
 - USTのフラグ欄に `+` または `-` が含まれるときに合成失敗することへの対策機能を追加
 - f0_feedbacker と f0_smoother の標準出力を削減
 - スタイルシフト用の拡張機能 (style_shifter.py) を追加
-  - enuconfig の `ust_editor` と `acoustic_editor` 欄に `%e/extensions/style_shifter` と記載することで使えるようになります。
+  - enuconfig の `ust_editor` と `acoustic_editor` 欄に `%e/extensions/style_shifter.py` と記載することで使えるようになります。
   - USTの各ノートのフラグ欄に `S5` や `S-4` のように記述すると歌い方が変わります。
     - たとえば `S5` とすると半音5つ分だけ高いときの歌い方で歌い、`S-4` とすると半音4つ分だけ低いときの歌い方で歌います。
   - 動作仕様
     - フラグに基づいてUST内の各ノートの音程を上下させる → 各種パラメーターをENUNU用モデルで計算する → 最初に下げた分だけ f0 の高さを戻す → WAVを生成する
+
+## v1.0.0 (2025-12-14)
+
+- SimpleEnunu 0.6.0 をベースにして最新のNNSVS向けに改修。これに伴い、拡張機能で設定できる項目が減少。
+  - 引き続き使用可能
+    - `ust_editor`
+    - `score_editor`
+    - `timing_editor`
+    - `acoustic_editor`
+  - 使用不可
+    - `ust_converter`
+    - `timing_calculator`
+    - `acoustic_calculator`
+    - `wav_synthesizer`
+    - `wav_editor`
+- enunu_training_kit >= 2.0.0 で作成したモデルに対応。
+- ソースコードのディレクトリ構成を変更。
