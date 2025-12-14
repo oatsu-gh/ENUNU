@@ -350,6 +350,12 @@ class ENUNU(SPSVS):
         """
         外部ツールでピッチなどを編集する。
         """
+        # Validate input tuple size matches feature_type
+        if feature_type == 'world':
+            assert len(multistream_features) == 4
+        elif feature_type == 'melf0':
+            assert len(multistream_features) == 3
+        
         # acoustic加工ツールのパスを取得
         extension_list = self.get_extension_path_list(key)
         # ツールが指定されていない場合はSkip
@@ -366,7 +372,6 @@ class ENUNU(SPSVS):
 
         # ツールが指定されている場合はCSV書き出し
         if feature_type == 'world':
-            assert len(multistream_features) == 4
             mgc, lf0, vuv, bap = multistream_features
             f0 = np.exp(lf0)
             np.savetxt(self.path_mgc, mgc, fmt='%.16f', delimiter=',')
@@ -374,7 +379,6 @@ class ENUNU(SPSVS):
             np.savetxt(self.path_vuv, vuv, fmt='%.16f', delimiter=',')
             np.savetxt(self.path_bap, bap, fmt='%.16f', delimiter=',')
         elif feature_type == 'melf0':
-            assert len(multistream_features) == 3
             mgc, lf0, vuv = multistream_features
             f0 = np.exp(lf0)
             # CSV書き出し
