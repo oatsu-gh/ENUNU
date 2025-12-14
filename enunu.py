@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2023-2025 oatsu
+# Copyright (c) 2021-2025 oatsu
 """
 1. UTAUプラグインのテキストファイルを読み取る。
 2. LABファイル→WAVファイル
@@ -27,6 +27,7 @@ from os.path import (
     relpath,
     splitext,
 )
+from tqdm.contrib.logging import logging_redirect_tqdm
 from shutil import move
 from tempfile import TemporaryDirectory, mkdtemp
 from tkinter.filedialog import asksaveasfilename
@@ -36,11 +37,14 @@ import utaupy
 import yaml
 from nnmnkwii.io import hts
 from scipy.io import wavfile
+from tqdm.auto import tqdm
 
-# import warnings
+# スクリプトのディレクトリをsys.pathに追加
+sys.path.append(dirname(__file__))
 import enulib
 
 # scikit-learn で警告が出るのを無視
+# import warnings
 # warnings.simplefilter("ignore")
 
 # my_package.my_moduleのみに絞ってsys.stderrにlogを出す
@@ -61,7 +65,7 @@ if find_spec('torch') is None:
     print('PC環境に合わせてPyTorchを自動インストールします。')
     print('インストール完了までしばらくお待ちください。')
     print('----------------------------------------------------------')
-    enulib.install_torch.ltt_install_torch()
+    enulib.install_torch.ltt_install_torch(sys.executable)
     print('----------------------------------------------------------')
     print('インストール成功しました。')
     print('----------------------------------------------------------\n')
@@ -71,10 +75,7 @@ import torch  # noqa: E402
 # nnsvs 関連を import する ---------------------------------------------------
 import nnsvs  # noqa: E402
 from nnsvs.svs import SPSVS  # noqa: E402
-
 from enulib import enunu2nnsvs  # noqa: E402
-
-logger.debug('Imported NNSVS module: %s', nnsvs)
 
 
 def get_project_path(path_utauplugin):
@@ -312,7 +313,7 @@ class ENUNU(SPSVS):
 
         # 複数ツールのすべてについて処理実施する
         for path_extension in extension_list:
-            print(f'Editing timing with {path_extension}')
+            tqdm.write(f'Editing timing with {path_extension}')
             # 変更前のモノラベルを読んでおく
             with open(self.path_mono_timing, encoding='utf-8') as f:
                 str_mono_old = f.read()
@@ -383,7 +384,7 @@ class ENUNU(SPSVS):
 
         # 複数ツールのすべてについて処理実施する
         for path_extension in extension_list:
-            print(f'Editing acoustic features with {path_extension}')
+            tqdm.write(f'Editing acoustic features with {path_extension}')
             enulib.extensions.run_extension(
                 path_extension,
                 ust=self.path_ust,
@@ -485,7 +486,7 @@ class ENUNU(SPSVS):
         # NOTE: segmented synthesis is not well tested. There MUST be better ways
         # to do this.
         if segmented_synthesis:
-            self.logger.warning('Segmented synthesis is not well tested. Use it on your own risk.')
+            # self.logger.warning('Segmented synthesis is not well tested. Use it on your own risk.')
             # NOTE: ここsegment_labels が nnsvs の中の関数にあるので呼び出せるように改造済み
             duration_modified_labels_segs = nnsvs.io.hts.segment_labels(
                 duration_modified_labels,
@@ -495,59 +496,57 @@ class ENUNU(SPSVS):
                 min_duration=5.0,
                 force_split_threshold=5.0,
             )
-            from tqdm.auto import tqdm  # pylint: disable=C0415
         else:
             duration_modified_labels_segs = [duration_modified_labels]
-
-            def tqdm(x, **kwargs):
-                return x
 
         # Run acoustic model and vocoder
         hts_frame_shift = int(self.config.frame_period * 1e4)
         wavs = []
         self.logger.info('Number of segments: %s', len(duration_modified_labels_segs))
-        for duration_modified_labels_seg in tqdm(
-            duration_modified_labels_segs,
-            desc='[segment]',
-            total=len(duration_modified_labels_segs),
-        ):
-            duration_modified_labels_seg.frame_shift = hts_frame_shift
+        with logging_redirect_tqdm(loggers=[self.logger]):
+            for duration_modified_labels_seg in tqdm(
+                duration_modified_labels_segs,
+                colour='blue',
+                desc='[segment]',
+                total=len(duration_modified_labels_segs),
+            ):
+                duration_modified_labels_seg.frame_shift = hts_frame_shift
 
-            # Predict acoustic features
-            # NOTE: if non-zero pre_f0_shift_in_cent is specified, the input pitch
-            # will be shifted before running the acoustic model
-            acoustic_features = self.predict_acoustic(
-                duration_modified_labels_seg,
-                f0_shift_in_cent=style_shift * 100,
-            )
+                # Predict acoustic features
+                # NOTE: if non-zero pre_f0_shift_in_cent is specified, the input pitch
+                # will be shifted before running the acoustic model
+                acoustic_features = self.predict_acoustic(
+                    duration_modified_labels_seg,
+                    f0_shift_in_cent=style_shift * 100,
+                )
 
-            # Post-processing for acoustic features
-            # NOTE: if non-zero post_f0_shift_in_cent is specified, the output pitch
-            # will be shifted as a part of post-processing
-            multistream_features = self.postprocess_acoustic(
-                acoustic_features=acoustic_features,
-                duration_modified_labels=duration_modified_labels_seg,
-                trajectory_smoothing=trajectory_smoothing,
-                trajectory_smoothing_cutoff=trajectory_smoothing_cutoff,
-                trajectory_smoothing_cutoff_f0=trajectory_smoothing_cutoff_f0,
-                force_fix_vuv=force_fix_vuv,
-                fill_silence_to_rest=fill_silence_to_rest,
-                f0_shift_in_cent=-style_shift * 100,
-            )
+                # Post-processing for acoustic features
+                # NOTE: if non-zero post_f0_shift_in_cent is specified, the output pitch
+                # will be shifted as a part of post-processing
+                multistream_features = self.postprocess_acoustic(
+                    acoustic_features=acoustic_features,
+                    duration_modified_labels=duration_modified_labels_seg,
+                    trajectory_smoothing=trajectory_smoothing,
+                    trajectory_smoothing_cutoff=trajectory_smoothing_cutoff,
+                    trajectory_smoothing_cutoff_f0=trajectory_smoothing_cutoff_f0,
+                    force_fix_vuv=force_fix_vuv,
+                    fill_silence_to_rest=fill_silence_to_rest,
+                    f0_shift_in_cent=-style_shift * 100,
+                )
 
-            # NOTE: ここにピッチ補正のための割り込み処理を追加-----------
-            multistream_features = self.edit_acoustic(
-                multistream_features, feature_type=self.feature_type
-            )
+                # NOTE: ここにピッチ補正のための割り込み処理を追加-----------
+                multistream_features = self.edit_acoustic(
+                    multistream_features, feature_type=self.feature_type
+                )
 
-            # Generate waveform by vocoder
-            wav = self.predict_waveform(
-                multistream_features=multistream_features,
-                vocoder_type=vocoder_type,
-                vuv_threshold=vuv_threshold,
-            )
+                # Generate waveform by vocoder
+                wav = self.predict_waveform(
+                    multistream_features=multistream_features,
+                    vocoder_type=vocoder_type,
+                    vuv_threshold=vuv_threshold,
+                )
 
-            wavs.append(wav)
+                wavs.append(wav)
 
         # Concatenate segmented waveforms
         wav = np.concatenate(wavs, axis=0).reshape(-1)
@@ -560,11 +559,9 @@ class ENUNU(SPSVS):
             loudness_norm=loudness_norm,
             target_loudness=target_loudness,
         )
-        # pylint: disable=W1203
         self.logger.info(f'Total time: {time.time() - start_time:.3f} sec')
         RT = (time.time() - start_time) / (len(wav) / self.sample_rate)
         self.logger.info(f'Total real-time factor: {RT:.3f}')
-        # pylint: enable=W1203
         return wav, self.sample_rate
 
 
@@ -581,7 +578,7 @@ def main(path_plugin: str, path_wav: str | None = None, play_wav: bool = False) 
     if not (path_plugin.endswith('.tmp') or path_plugin.endswith('.ust')):
         raise ValueError('Input file must be UST or TMP(plugin).')
     # UTAUの一時ファイルに書いてある設定を読み取る
-    logging.info('reading settings in TMP')
+    logger.info('reading settings in TMP')
     path_ust, voice_dir, _ = get_project_path(path_plugin)
 
     # 日付時刻を取得
@@ -611,23 +608,22 @@ def main(path_plugin: str, path_wav: str | None = None, play_wav: bool = False) 
         temp_dir = join(out_dir, f'{songname}_enutemp')
         path_wav = abspath(path_wav)
 
-    # ENUNU=>1.0.0 または SimpleEnunu 用に作成されたNNSVSモデルの場合
+    ## NNSVS / ENUNU モデルを探す
+    # model フォルダ
     if packed_model_exists(join(voice_dir, 'model')):
         model_dir = join(voice_dir, 'model')
-    # ENUNU 用ではない通常のNNSVSモデルの場合
+    # 直置き
     elif packed_model_exists(voice_dir):
         model_dir = voice_dir
-        logging.warning('NNSVS model is selected. This model might be not ready for ENUNU.')
-
-    # ENUNU<1.0.0 向けの構成のモデルな場合
+    # ENUNU<1.0.0 向けのディレクトリ構成
     elif exists(join(voice_dir, 'enuconfig.yaml')):
-        logging.info('Regacy ENUNU model is selected. Converting it for the compatibility...')
+        logger.info('Regacy ENUNU model is selected. Converting it for the compatibility...')
         model_dir = join(voice_dir, 'model')
         makedirs(model_dir, exist_ok=True)
         print('----------------------------------------------')
         wrapped_enunu2nnsvs(voice_dir, model_dir)
         print('\n----------------------------------------------')
-        logging.info('Converted.')
+        logger.info('Converted.')
 
     # configファイルがあるか調べて、なければ例外処理
     else:
@@ -641,7 +637,7 @@ def main(path_plugin: str, path_wav: str | None = None, play_wav: bool = False) 
     makedirs(temp_dir, exist_ok=True)
 
     # モデルを読み取る
-    logging.info('Loading models')
+    logger.info('Loading models')
     engine = ENUNU(model_dir)
     engine.set_paths(temp_dir=temp_dir, songname=songname, path_feedback=path_plugin)
 
@@ -654,10 +650,10 @@ def main(path_plugin: str, path_wav: str | None = None, play_wav: bool = False) 
         del enuconfig
 
     # USTを一時フォルダに複製
-    print(f'{datetime.now()} : copying UST')
+    logger.info(f'{datetime.now()} : copying UST')
     shutil.copy2(path_plugin, engine.path_ust)
     # Tableファイルを一時フォルダに複製
-    print(f'{datetime.now()} : copying Table')
+    logger.info(f'{datetime.now()} : copying Table')
     shutil.copy2(find_table(model_dir), engine.path_table)
 
     # USTファイルを編集する
