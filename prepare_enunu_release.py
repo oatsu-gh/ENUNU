@@ -31,7 +31,7 @@ def pip_uninstall_torch(python_exe: str):
     subprocess.run(args, check=True)  # noqa: S603
 
 
-def pip_install_upgrade_requirements(python_exe: str, packages: list[str]):
+def pip_install_upgrade_requirements(python_exe: str):
     """
     pythonのパッケージを更新する
     """
