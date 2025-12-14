@@ -175,3 +175,4 @@
     - `wav_synthesizer`
     - `wav_editor`
 - enunu_training_kit >= 2.0.0 で作成したモデルに対応。
+- ソースコードのディレクトリ構成を変更。
