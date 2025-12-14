@@ -352,10 +352,14 @@ class ENUNU(SPSVS):
         """
         # Validate input tuple size matches feature_type
         if feature_type == 'world':
-            assert len(multistream_features) == 4
+            assert len(multistream_features) == 4, (
+                f'Expected 4-element tuple for world, got {len(multistream_features)}'
+            )
         elif feature_type == 'melf0':
-            assert len(multistream_features) == 3
-        
+            assert len(multistream_features) == 3, (
+                f'Expected 3-element tuple for melf0, got {len(multistream_features)}'
+            )
+
         # acoustic加工ツールのパスを取得
         extension_list = self.get_extension_path_list(key)
         # ツールが指定されていない場合はSkip
