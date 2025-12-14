@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2023-2025 oatsu
+# Copyright (c) 2021-2025 oatsu
 """
 ENUNUのリリース準備をする
 """
@@ -11,15 +11,31 @@ from os import chdir, makedirs
 from os.path import basename, dirname, exists, isdir, join
 from shutil import make_archive
 
-KEEP_LATEST_PACKAGES = ['pip', 'setuptools', 'wheel', 'utaupy', 'light-the-torch']
 REMOVE_LIST = ['__pycache__', '.mypy']
 PYTHON_DIR = 'python-3.12.10-embed-amd64'
 
 
-def pip_install_upgrade(python_exe: str, packages: list[str]):
+def pip_uninstall_torch(python_exe: str):
+    """
+    PyTorchをアンインストールする
+    """
+    packages = ['torch', 'torchaudio', 'torchvision']
+    args = [
+        python_exe,
+        '-m',
+        'pip',
+        'uninstall',
+        '--disable-pip-version-check',
+        '-y',
+    ] + packages
+    subprocess.run(args, check=True)  # noqa: S603
+
+
+def pip_install_upgrade_requirements(python_exe: str, packages: list[str]):
     """
     pythonのパッケージを更新する
     """
+    #
     args = [
         python_exe,
         '-m',
@@ -27,7 +43,25 @@ def pip_install_upgrade(python_exe: str, packages: list[str]):
         'install',
         '--upgrade',
         '--no-warn-script-location',
-    ] + packages
+        '--disable-pip-version-check',
+        'setuptools',
+        'wheel',
+    ]
+    subprocess.run(args, check=True)  # noqa: S603
+
+    # requirements.txt に記載されているパッケージを更新
+    requirements_txt = join(dirname(__file__), 'requirements.txt')
+    args = [
+        python_exe,
+        '-m',
+        'pip',
+        'install',
+        '--upgrade',
+        '--no-warn-script-location',
+        '--disable-pip-version-check',
+        '-r',
+        requirements_txt,
+    ]
     subprocess.run(args, check=True)  # noqa: S603
 
 
@@ -91,24 +125,6 @@ def create_plugin_txt(path_out, version):
         f.write(s)
 
 
-def copy_documents(out_dir):
-    """
-    markdownドキュメントをリリースフォルダにコピーして、
-    txtファイルに変換する。
-    """
-    documents = {
-        './LICENSE.txt',
-        './README.md',
-        './HISTORY.md',
-        './pyproject.toml',
-        './requirements.txt',
-    }
-
-    for old_path in documents:
-        new_path = join(out_dir, basename(old_path))
-        shutil.copy2(old_path, new_path)
-
-
 def main():
     """
     全体的にいい感じにする
@@ -128,15 +144,14 @@ def main():
     print(f'Making directory: {enunu_release_dir}')
     makedirs(enunu_release_dir)
 
-    # README をリリースフォルダにコピーする
-    print('Copying documents')
-    copy_documents(enunu_release_dir)
-
     # utaupyとかを更新する
     python_dir = PYTHON_DIR
     python_exe = join(python_dir, 'python.exe')
-    print(f'Upgrading packages of {python_dir} (this may take some minutes)')
-    pip_install_upgrade(python_exe, KEEP_LATEST_PACKAGES)
+    print(f'Upgrading packages in {python_dir}')
+    pip_install_upgrade_requirements(python_exe)
+    print()
+    print(f'Uninstalling PyTorch in {python_dir}')
+    pip_uninstall_torch(python_exe)
     print()
 
     # Pythonの実行ファイルをコピーする
@@ -144,9 +159,22 @@ def main():
     shutil.copytree(python_dir, join(enunu_release_dir, python_dir))
 
     # なんかいろいろコピーする
-    print('Copying scripts')
-    shutil.copy2('enunu.py', join(enunu_release_dir))
-    shutil.copy2('repair_packages.bat', join(enunu_release_dir))
+    print('Copying files')
+
+    files = [
+        'enunu.py',
+        'LICENSE.txt',
+        'HISTORY.md',
+        'README.md',
+        'pyproject.toml',
+        'requirements.txt',
+        'repair_packages.bat',
+    ]
+    for path in files:
+        print(f'  Copying {path}')
+        shutil.copy2(path, enunu_release_dir)
+
+    print('Copying directories')
     shutil.copytree('enulib', join(enunu_release_dir, 'enulib'))
     shutil.copytree('extensions', join(enunu_release_dir, 'extensions'))
 
