@@ -242,7 +242,7 @@ def apply_vibrato_to_f0(path_f0_in: str, path_f0_out: str, path_delta_f0_cent: s
 
 def main(path_f0_in: str, path_f0_out: str, path_ust: str):
     """
-    全体時の処理をやる
+    全体の処理をやる
     """
     # 一時ファイルの置き場を指定
     path_delta_f0_cent = join(dirname(__file__), 'temp_delta_f0_cent.csv')
